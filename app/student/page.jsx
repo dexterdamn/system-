@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import StudentLoginForm from "./student-login/page";
-import CreateAccount from "./createaccount/page";
+import CreateAccount from "./create-account/page";
 
 export default function StudentPage() {
   const [showLogin, setShowLogin] = useState(true);

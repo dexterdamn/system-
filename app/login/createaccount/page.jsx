@@ -7,7 +7,7 @@ import { FaEnvelope, FaLock, FaUser } from "react-icons/fa";
 import { toast } from "sonner";
 import { FcGoogle } from "react-icons/fc";
 
-export default function CreateAccount({ onBack }) {
+export default function CreateAccount() {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
 
