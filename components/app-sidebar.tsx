@@ -172,9 +172,15 @@ const sampleData = {
   ],
 }
 
-export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-   const [username, setUsername] = useState("");
-  const [email, setEmail] = useState("");
+
+interface AppSidebarProps {
+  username: string;
+  email: string;
+}
+
+export function AppSidebar({ username, email, ...props }: AppSidebarProps & React.ComponentProps<typeof Sidebar>) {
+  //  const [username, setUsername] = useState("");
+  // const [email, setEmail] = useState("");
 
 
   useEffect(() => {
@@ -182,9 +188,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     if (typeof window !== "undefined") {
       const storedUsername = localStorage.getItem("username");
       const storedEmail = localStorage.getItem("email");
-
-      if (storedUsername) setUsername(storedUsername);
-      if (storedEmail) setEmail(storedEmail);
+   // if (storedUsername) setUsername(storedUsername);
+      // if (storedEmail) setEmail(storedEmail);
+   
     }
   }, []);
 

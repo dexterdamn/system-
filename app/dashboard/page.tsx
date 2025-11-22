@@ -304,7 +304,8 @@ export default function Page() {
     <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
       <AppSidebar username={username} email={email} />
       <Toaster richColors position="bottom-right" />
-      <ExamForm exams={exams} />
+      {/* <ExamForm exams={exams} /> */}
+      <ExamForm/>
     </ThemeProvider>
   );
 }
