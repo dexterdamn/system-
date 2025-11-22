@@ -225,7 +225,7 @@
 
 import { useEffect, useState } from 'react';
 import { ThemeProvider } from "next-themes";
-import  AppSidebar  from "@/components/app-sidebar";
+import { AppSidebar } from "@/components/app-sidebar";
 import { Toaster } from "sonner";
 import ExamForm from "./examform/components/ExamPage";
 
@@ -233,9 +233,7 @@ export default function Page() {
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [exams, setExams] = useState([]); 
-    // const [token, setToken] = useState(null);
-    const [token, setToken] = useState<string | null>(null);
-
+    const [token, setToken] = useState(null);
 // ← Moved here (CORRECT)
 
   // Prevent back navigation
