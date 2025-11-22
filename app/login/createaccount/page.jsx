@@ -5,9 +5,8 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { FaEnvelope, FaLock, FaUser } from "react-icons/fa";
 import { toast } from "sonner";
-import { FcGoogle } from "react-icons/fc";
 
-export default function CreateAccount() {
+export default function CreateAccountPage() {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
 
@@ -25,50 +24,44 @@ export default function CreateAccount() {
   if (!mounted) return null;
 
   const handleCreateAccount = async (e) => {
-  e.preventDefault();
+    e.preventDefault();
 
-  if (!firstName || !lastName || !gender || !email || !password || !confirmPassword) {
-    toast.error("All fields are required!");
-    return;
-  }
-
-  if (password !== confirmPassword) {
-    toast.error("Passwords do not match!");
-    return;
-  }
-
-  try {
-    const response = await fetch("http://localhost:5000/admin/register", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        first_name: firstName,
-        last_name: lastName,
-        gender,
-        email,
-        password,
-        confirm_password: confirmPassword,
-      }),
-    });
-
-    const data = await response.json();
-
-    if (response.ok) {
-      toast.success("Admin account created successfully!");
-      router.push("/login"); // Redirect to admin dashboard
-    } else {
-      toast.error(data.error || "Failed to create admin account.");
+    if (!firstName || !lastName || !gender || !email || !password || !confirmPassword) {
+      toast.error("All fields are required!");
+      return;
     }
-  } catch (err) {
-    console.error(err);
-    toast.error("Server error. Please try again later.");
-  }
-};
 
+    if (password !== confirmPassword) {
+      toast.error("Passwords do not match!");
+      return;
+    }
 
-   const handleGoogleLogin = () => {
-    // Update this URL to match your actual Google OAuth route
-    window.location.href = "http://localhost:5000/auth/google";
+    try {
+      const response = await fetch("http://localhost:5000/admin/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          first_name: firstName,
+          last_name: lastName,
+          gender,
+          email,
+          password,
+          confirm_password: confirmPassword,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        toast.success("Admin account created successfully!");
+        router.push("/login");
+      } else {
+        toast.error(data.error || "Failed to create admin account.");
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Server error. Please try again later.");
+    }
   };
 
   return (
@@ -77,6 +70,7 @@ export default function CreateAccount() {
         <h1 className="text-4xl font-bold text-center mb-6">
           Create <span className="text-blue-700">Account</span>
         </h1>
+
         <form onSubmit={handleCreateAccount}>
           <div className="flex flex-col gap-2">
             <div className="flex items-center border border-gray-900 rounded-md p-3">
@@ -101,7 +95,7 @@ export default function CreateAccount() {
               />
             </div>
 
-            <div className="border border-gray-900 rounded-md p-3 ">
+            <div className="border border-gray-900 rounded-md p-3">
               <select
                 value={gender}
                 onChange={(e) => setGender(e.target.value)}
@@ -110,7 +104,6 @@ export default function CreateAccount() {
                 <option value="">Select Gender</option>
                 <option value="Male">Male</option>
                 <option value="Female">Female</option>
-               
               </select>
             </div>
 
@@ -151,24 +144,9 @@ export default function CreateAccount() {
               Create Account
             </Button>
 
-           {/* Google login button */}
-             {/* <Button
-              type="button"
-              onClick={handleGoogleLogin}
-              className="bg-white hover:bg-white border border-gray-400 text-black w-full flex items-center justify-center gap-2 cursor-pointer"
-            >
-              <FcGoogle size={20} />
-             Continue with Google
-            </Button> */}
-
-
             <div className="flex mt-2 flex-col items-center text-black text-base">
-              <span>Already have an account?</span>{" "}
-              
-                <a href="/login" className="text-blue-500">
-                  Login here
-                </a>
-              
+              <span>Already have an account?</span>
+              <a href="/login" className="text-blue-500">Login here</a>
             </div>
           </div>
         </form>
