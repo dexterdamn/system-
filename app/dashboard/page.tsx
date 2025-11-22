@@ -233,7 +233,9 @@ export default function Page() {
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [exams, setExams] = useState([]); 
-    const [token, setToken] = useState(null);
+    // const [token, setToken] = useState(null);
+    const [token, setToken] = useState<string | null>(null);
+
 // ← Moved here (CORRECT)
 
   // Prevent back navigation
