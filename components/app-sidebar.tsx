@@ -172,21 +172,28 @@ const sampleData = {
   ],
 }
 
-export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-   const [username, setUsername] = useState("");
-  const [email, setEmail] = useState("");
+interface AppSidebarProps {
+  username: string;
+  email: string;
+}
 
 
-  useEffect(() => {
-    // Ensure we are in a browser environment
-    if (typeof window !== "undefined") {
-      const storedUsername = localStorage.getItem("username");
-      const storedEmail = localStorage.getItem("email");
+// export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+export default function AppSidebar({ username, email }: AppSidebarProps) {
+  //  const [username, setUsername] = useState("");
+  // const [email, setEmail] = useState("");
 
-      if (storedUsername) setUsername(storedUsername);
-      if (storedEmail) setEmail(storedEmail);
-    }
-  }, []);
+
+  // useEffect(() => {
+  //   // Ensure we are in a browser environment
+  //   if (typeof window !== "undefined") {
+  //     const storedUsername = localStorage.getItem("username");
+  //     const storedEmail = localStorage.getItem("email");
+
+  //     if (storedUsername) setUsername(storedUsername);
+  //     if (storedEmail) setEmail(storedEmail);
+  //   }
+  // }, []);
 
 const handleNavClick = (title: string) => {
   // You can handle navigation logic here if needed
