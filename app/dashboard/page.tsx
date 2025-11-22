@@ -225,7 +225,7 @@
 
 import { useEffect, useState } from 'react';
 import { ThemeProvider } from "next-themes";
-import { AppSidebar } from "@/components/app-sidebar";
+import  AppSidebar  from "@/components/app-sidebar";
 import { Toaster } from "sonner";
 import ExamForm from "./examform/components/ExamPage";
 

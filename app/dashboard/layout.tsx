@@ -5,7 +5,7 @@ import { ThemeProvider } from "next-themes";
 import { Toaster } from "sonner";
 import "./globals.css"; // Adjust this if needed
 
-import { AppSidebar } from "@/components/app-sidebar";
+import  AppSidebar  from "@/components/app-sidebar";
 import {
   SidebarInset,
   SidebarProvider,
