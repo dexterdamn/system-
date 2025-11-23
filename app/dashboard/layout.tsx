@@ -34,7 +34,7 @@ export default function DashboardLayout({
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem >
           <SidebarProvider >
             {/* <div className="flex h-screen"> */}
-              {/* <AppSidebar /> */}
+              <AppSidebar />
               <SidebarInset className="flex-1 ">
                 <header className="flex h-16 items-center gap-2 z-50">
                   <div className="flex items-center gap-2 px-4 ">

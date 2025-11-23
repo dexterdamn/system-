@@ -233,9 +233,7 @@ export default function Page() {
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [exams, setExams] = useState([]); 
-    // const [token, setToken] = useState(null);
-    const [token, setToken] = useState<string | null>(null)
-
+    const [token, setToken] = useState(null);
 // ← Moved here (CORRECT)
 
   // Prevent back navigation
@@ -304,8 +302,7 @@ export default function Page() {
     <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
       <AppSidebar username={username} email={email} />
       <Toaster richColors position="bottom-right" />
-      {/* <ExamForm exams={exams} /> */}
-      <ExamForm/>
+      <ExamForm exams={exams} />
     </ThemeProvider>
   );
 }
