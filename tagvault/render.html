@@ -1,0 +1,2523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TagVault — Render View</title>
+<script src="theme.js"></script>
+<script>window.initTagVaultTheme && window.initTagVaultTheme();</script>
+<script>window.ensureTagVaultFontPack && window.ensureTagVaultFontPack('core');</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.4.21/vue.global.prod.min.js"></script>
+<link rel="stylesheet" href="style/index.css">
+<link rel="stylesheet" href="style/render.css">
+</head>
+<body>
+<div id="app">
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-logo">
+        <div class="brand-icon">🏷</div>
+        <div>
+          <div class="brand-name">Inventory</div>
+          <div class="brand-sub">Tag Management</div>
+        </div>
+      </div>
+    </div>
+    <div class="nav-section">
+      <div class="nav-label">Pages</div>
+      <a href="index.html" class="nav-link"><span class="nav-icon">✚</span> Add Entry</a>
+      <a href="inventory.html" class="nav-link">
+        <span class="nav-icon">📦</span> Inventory
+        <span class="nav-badge">{{ entries.length }}</span>
+      </a>
+      <a href="render.html" class="nav-link active"><span class="nav-icon">📊</span> Render View</a>
+    </div>
+    <div class="sidebar-footer">{{ entriesWithSheet.length }} of {{ entries.length }} have sheet data</div>
+  </aside>
+
+  <!-- CONTENT -->
+  <div class="content">
+    <div class="topbar">
+      <div>
+        <div class="topbar-title">Render View</div>
+        <div class="topbar-sub">Entries with saved table data — click to view</div>
+      </div>
+
+      <div class="topbar-actions">
+        <div class="search-wrap">
+          <span class="search-icon">🔍</span>
+          <input class="search-input" v-model="search" placeholder="Search entries..." />
+        </div>
+        <label class="theme-toggle">
+          <span class="sr-only">Toggle color theme</span>
+          <input class="theme-toggle-input" data-theme-toggle type="checkbox" aria-label="Toggle color theme">
+          <svg width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" stroke="currentColor" fill="none" class="theme-toggle-icon theme-toggle-icon-sun"><circle r="5" cy="12" cx="12"></circle><line y2="3" y1="1" x2="12" x1="12"></line><line y2="23" y1="21" x2="12" x1="12"></line><line y2="5.64" y1="4.22" x2="5.64" x1="4.22"></line><line y2="19.78" y1="18.36" x2="19.78" x1="18.36"></line><line y2="12" y1="12" x2="3" x1="1"></line><line y2="12" y1="12" x2="23" x1="21"></line><line y2="18.36" y1="19.78" x2="5.64" x1="4.22"></line><line y2="4.22" y1="5.64" x2="19.78" x1="18.36"></line></svg>
+          <svg viewBox="0 0 24 24" class="theme-toggle-icon theme-toggle-icon-moon"><path d="m12.3 4.9c.4-.2.6-.7.5-1.1s-.6-.8-1.1-.8c-4.9.1-8.7 4.1-8.7 9 0 5 4 9 9 9 3.8 0 7.1-2.4 8.4-5.9.2-.4 0-.9-.4-1.2s-.9-.2-1.2.1c-1 .9-2.3 1.4-3.7 1.4-3.1 0-5.7-2.5-5.7-5.7 0-1.9 1.1-3.8 2.9-4.8zm2.8 12.5c.5 0 1 0 1.4-.1-1.2 1.1-2.8 1.7-4.5 1.7-3.9 0-7-3.1-7-7 0-2.5 1.4-4.8 3.5-6-.7 1.1-1 2.4-1 3.8-.1 4.2 3.4 7.6 7.6 7.6z"></path></svg>
+        </label>
+      </div>
+
+    </div>
+
+    <div class="page">
+      <!-- Stats -->
+      <div class="stats-row">
+        <div class="stat-card stat-card--blue">
+          <div class="stat-card__icon">📊</div>
+          <div class="stat-card__content">
+            <div class="stat-num">{{ entriesWithSheet.length }}</div>
+            <div class="stat-label">Total Imports</div>
+          </div>
+        </div>
+        <div class="stat-card stat-card--violet">
+          <div class="stat-card__icon">📁</div>
+          <div class="stat-card__content">
+            <div class="stat-num">{{ entries.length }}</div>
+            <div class="stat-label">Total Entries</div>
+          </div>
+        </div>
+        <div class="stat-card stat-card--green">
+          <div class="stat-card__icon">📂</div>
+          <div class="stat-card__content">
+            <div class="stat-num">{{ uniqueCategories }}</div>
+            <div class="stat-label">Categories</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Category filter -->
+      <div class="filter-row">
+        <div class="chip" :class="{active:catFilter===''}" @click="catFilter=''">All</div>
+        <div class="chip" v-for="c in categories" :key="c.name"
+          :class="{active:catFilter===c.name}"
+          @click="catFilter=catFilter===c.name?'':c.name">
+          <span class="chip__dot" :style="{background:c.color}"></span>
+          {{ c.name }}
+        </div>
+        <div class="view-toggle" role="tablist" aria-label="Render mode">
+          <button class="view-toggle__btn" :class="{active: displayMode === 'standardized'}" @click="setDisplayMode('standardized')">Standardized</button>
+          <button class="view-toggle__btn" :class="{active: displayMode === 'raw'}" @click="setDisplayMode('raw')">Raw CSV</button>
+        </div>
+      </div>
+
+      <!-- Empty: no sheet data -->
+      <div class="render-empty" v-if="entriesWithSheet.length === 0">
+        <div class="render-empty-icon">📭</div>
+        <div class="render-empty-title">No saved sheet data yet</div>
+        <div class="render-empty-sub">
+          Go to <a href="index.html" style="color:var(--accent);font-weight:700">Add Entry</a>
+          and use <strong>Import Observations</strong> to upload a CSV,<br>
+          or go to <a href="inventory.html" style="color:var(--accent);font-weight:700">Inventory</a>,
+          open any entry's sheet, fill in data and click <strong>💾 Save</strong>.<br>
+          It will appear here automatically.
+        </div>
+      </div>
+
+      <!-- Empty: filter -->
+      <div class="render-empty" v-else-if="filteredEntries.length === 0">
+        <div class="render-empty-icon">🔍</div>
+        <div class="render-empty-title">No matches</div>
+        <div class="render-empty-sub">Try a different search or filter.</div>
+      </div>
+
+      <!-- Cards grid -->
+      <div class="render-grid" v-else>
+        <div class="render-card" v-for="e in filteredEntries" :key="e.id" @click="openSheet(e)">
+          <div class="render-card-top" :style="{background: catColor(e.category)}"></div>
+          <div class="render-card-body">
+            <div class="render-card-title">{{ e.title }}</div>
+            <div class="render-card-meta">
+              <span class="cat-badge" :style="{background:catColor(e.category)+'18',color:catColor(e.category)}">{{ e.category }}</span>
+              <span style="font-size:11px;color:var(--text3)">{{ sheetDimensions(e.id) }}</span>
+              <span class="pill pill-other" v-for="t in e.tags.slice(0,2)" :key="t"
+                    style="font-size:10px;padding:1px 7px">{{ t }}</span>
+            </div>
+            <div class="render-card-preview">
+              <div class="preview-row">
+                <div class="preview-cell preview-col-header" style="width:28px;flex:none;background:#d8d8d8;">#</div>
+                <div class="preview-cell preview-col-header"
+                     v-for="ci in Math.min(4, previewSheetData(e.id).cols)" :key="ci">
+                  {{ colLetter(ci-1) }}
+                </div>
+              </div>
+              <div class="preview-row" v-for="ri in Math.min(4, previewSheetData(e.id).rows)" :key="ri">
+                <div class="preview-cell preview-col-header" style="width:28px;flex:none;">{{ ri }}</div>
+                <div class="preview-cell"
+                     v-for="ci in Math.min(4, previewSheetData(e.id).cols)" :key="ci"
+                     :class="previewSheetData(e.id).data[ri-1] && previewSheetData(e.id).data[ri-1][ci-1] ? 'has-data' : 'empty'">
+                  {{ previewSheetData(e.id).data[ri-1] && previewSheetData(e.id).data[ri-1][ci-1] || '—' }}
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="render-card-footer">
+            <div class="render-card-footer-left">{{ formatDate(e.createdAt) }}</div>
+            <button class="render-card-open-btn">View Sheet →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ EXCEL VIEW MODAL ══════════════════════════════════════════ -->
+<div class="excel-overlay" :class="{open: viewEntry}" @click.self="closeSheet">
+  <div class="excel-modal" v-if="viewEntry">
+
+    <!-- Header -->
+    <div class="excel-modal-header">
+      <span style="font-size:18px;flex-shrink:0">📊</span>
+      <div class="excel-modal-title">{{ viewEntry.title }}</div>
+      <span class="excel-modal-cat">{{ viewEntry.category }}</span>
+      <span class="readonly-badge">Read-Only</span>
+      <button class="excel-modal-close" @click="closeSheet">✕</button>
+    </div>
+
+    <!-- Info bar -->
+    <div class="excel-info-bar">
+      <span><strong>{{ currentViewSheetData().rows }}</strong> rows</span>
+      <span style="color:#94a3b8">×</span>
+      <span><strong>{{ currentViewSheetData().cols }}</strong> columns</span>
+      <span class="excel-info-pill">{{ currentViewSheetName() }}</span>
+      <span class="excel-info-pill">{{ filledCellsByMode(viewEntry.id, displayMode, activeWorkbookSheetId) }} cells with data</span>
+      <span class="excel-info-pill">Saved {{ formatDate(viewEntry.createdAt) }}</span>
+      <span class="excel-info-pill">{{ displayModeLabel }}</span>
+      <div class="excel-action-group">
+        <div class="render-download-wrap">
+          <div class="render-download-btn" :class="{open: downloadOpen}" @click="downloadOpen=!downloadOpen">
+            <span class="render-download-placeholder">Download</span>
+            <span class="render-download-arrow">▼</span>
+          </div>
+          <div class="render-download-menu" v-if="downloadOpen">
+            <button class="render-download-item" @click="exportCSV(viewEntry); downloadOpen=false">
+              <span class="render-download-dot csv"></span>
+              Export CSV
+            </button>
+            <button class="render-download-item" @click="exportExcel(viewEntry); downloadOpen=false">
+              <span class="render-download-dot excel"></span>
+              Export Excel
+            </button>
+          </div>
+        </div>
+        <a :href="inventoryEditHref(viewEntry)" class="excel-export-btn" style="text-decoration:none">✏️ Edit in Inventory</a>
+      </div>
+    </div>
+
+    <div class="excel-sheet-tabs" v-if="workbookSheets(viewEntry.id).length > 1">
+      <button
+        v-for="sheet in workbookSheets(viewEntry.id)"
+        :key="sheet.id"
+        class="excel-sheet-tab"
+        :class="{active: activeWorkbookSheetId === sheet.id}"
+        @click="selectWorkbookSheet(sheet.id)"
+      >
+        <span class="excel-sheet-tab-name">{{ sheet.name }}</span>
+        <span class="excel-sheet-tab-meta">{{ sheet.rows }} × {{ sheet.cols }}</span>
+      </button>
+    </div>
+
+    <!-- Body -->
+    <div class="excel-body-split">
+
+      <!-- Read-only grid -->
+      <div class="excel-scroll">
+        <table class="excel-table" :style="tableThemeStyle(viewEntry.id, activeWorkbookSheetId)">
+          <thead>
+            <tr>
+              <th class="col-num-header"></th>
+              <th v-for="ci in currentViewSheetData().cols" :key="ci">
+                {{ colLetter(ci-1) }}
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="(row, ri) in currentViewSheetData().data" :key="ri"
+                :class="tableRowClass(viewEntry.id, row, ri, activeWorkbookSheetId)">
+              <td class="row-num-cell">{{ ri+1 }}</td>
+
+              <!-- Merged single-cell rows: highlight, title, note -->
+              <template v-if="shouldUseStandardizedLayout(viewEntry.id, activeWorkbookSheetId) && isMergedRow(row, ri)">
+                <td :colspan="currentViewSheetData().cols"
+                    class="data-cell has-data merged-cell"
+                    :class="{'has-custom-style': hasCustomCellStyle(viewEntry.id, ri, 0, activeWorkbookSheetId)}"
+                    :style="renderCellStyle(viewEntry.id, ri, 0, activeWorkbookSheetId)">
+                  {{ getMergedText(row) }}
+                </td>
+              </template>
+
+              <!-- Normal rows: one <td> per cell -->
+              <template v-else>
+                <td v-for="(cell, ci) in row" :key="ci"
+                    class="data-cell"
+                    :class="[cell ? 'has-data' : 'empty', tableCellClass(viewEntry.id, row, ri, ci, activeWorkbookSheetId), {'has-custom-style': hasCustomCellStyle(viewEntry.id, ri, ci, activeWorkbookSheetId)}]"
+                    :style="renderCellStyle(viewEntry.id, ri, ci, activeWorkbookSheetId)">
+                  {{ cell || '' }}
+                </td>
+              </template>
+
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Chart panel -->
+      <div class="excel-chart-panel" v-if="currentChartData()">
+        <div class="excel-chart-title">Chart View · {{ currentViewSheetName() }}</div>
+        <canvas id="active-chart" class="excel-chart-canvas"></canvas>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast-container">
+  <div class="toast" v-for="t in toasts" :key="t.id" :class="t.type">{{ t.msg }}</div>
+</div>
+</div>
+
+<script type="module" src="lib/csv-parser.js"></script>
+<script src="data.js"></script>
+<script>
+const { createApp, ref, computed, nextTick, watch } = Vue;
+
+const SHEET_STORE = 'tagvault_sheets';
+const RENDER_MODE_STORE = 'tagvault_render_mode';
+const CHART_JS_SRC = 'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js';
+const EXCEL_JS_SRC = 'https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js';
+const JSZIP_SRC = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+const TAGVAULT_META_SHEET = '__TagVaultMeta';
+const TAGVAULT_META_MARKER = 'TAGVAULT_META';
+const TAGVAULT_META_VERSION = 1;
+const EMPTY_SHEET = Object.freeze({ rows: 0, cols: 0, data: [] });
+const scriptLoaders = {};
+
+function scheduleIdle(task, timeout = 1200) {
+  if (window.requestIdleCallback) {
+    window.requestIdleCallback(task, { timeout });
+    return;
+  }
+  window.setTimeout(task, 250);
+}
+
+function loadExtendedFontPack() {
+  if (window.ensureTagVaultFontPack) window.ensureTagVaultFontPack('extended');
+}
+
+function ensureScript(src, isReady) {
+  if (isReady()) return Promise.resolve();
+  if (scriptLoaders[src]) return scriptLoaders[src];
+
+  scriptLoaders[src] = new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = src;
+    script.async = true;
+    script.onload = () => resolve();
+    script.onerror = () => {
+      delete scriptLoaders[src];
+      reject(new Error(`Failed to load ${src}`));
+    };
+    document.head.appendChild(script);
+  });
+
+  return scriptLoaders[src];
+}
+
+function ensureChartLib() {
+  return ensureScript(CHART_JS_SRC, () => !!window.Chart);
+}
+
+function ensureExcelExportDeps() {
+  return Promise.all([
+    ensureScript(EXCEL_JS_SRC, () => !!window.ExcelJS),
+    ensureScript(JSZIP_SRC, () => !!window.JSZip),
+  ]);
+}
+
+function loadSheets() {
+  try { return JSON.parse(localStorage.getItem(SHEET_STORE)) || {}; }
+  catch { return {}; }
+}
+
+function defaultSheetTheme() {
+  return {
+    headerDark: '#1e3a5f',
+    headerLight: '#2d5fa3',
+    code: '#4c1d95',
+    name: '#7c3aed',
+    alt: '#dbeafe',
+    total: '#1e3a5f',
+    highlight: '#fef9c3',
+    note: '#f9fafb',
+  };
+}
+
+function colLetter(ci) {
+  let s = '', n = ci;
+  while (n >= 0) { s = String.fromCharCode(65 + (n % 26)) + s; n = Math.floor(n / 26) - 1; }
+  return s;
+}
+
+createApp({
+  setup() {
+    scheduleIdle(loadExtendedFontPack);
+
+    const entries    = ref(loadEntries());
+    const categories = ref(loadCategories());
+    const sheets     = ref(loadSheets());
+    const search     = ref('');
+    const catFilter  = ref('');
+    const displayMode = ref(localStorage.getItem(RENDER_MODE_STORE) || 'standardized');
+    const viewEntry  = ref(null);
+    const activeWorkbookSheetId = ref('');
+    const downloadOpen = ref(false);
+    const toasts     = ref([]);
+
+    function catColor(name) {
+      return (categories.value.find(c => c.name === name) || {}).color || '#94a3b8';
+    }
+
+    const sheetVariants = computed(() => {
+      const variants = {};
+      Object.entries(sheets.value).forEach(([id, sheet]) => {
+        if (!sheet || !sheet.data) return;
+        variants[id] = { raw: sheet, trimmed: null };
+      });
+      return variants;
+    });
+
+    function rawSheetData(id) {
+      return sheetVariants.value[id]?.raw || EMPTY_SHEET;
+    }
+
+    function sheetData(id) {
+      return displayMode.value === 'raw' ? rawSheetData(id) : trimmedSheetData(id);
+    }
+
+    function setDisplayMode(mode) {
+      displayMode.value = mode;
+      localStorage.setItem(RENDER_MODE_STORE, mode);
+    }
+
+    function findDataCutoffCol(rows) {
+      let maxCol = 0;
+      rows.forEach(row => {
+        for (let ci = row.length - 1; ci >= 0; ci--) {
+          if (row[ci] && String(row[ci]).trim()) {
+            if (ci > maxCol) maxCol = ci;
+            break;
+          }
+        }
+      });
+
+      let lastTotalCol = -1;
+      for (let ri = 0; ri < Math.min(6, rows.length); ri++) {
+        const row = rows[ri];
+        for (let ci = 0; ci <= maxCol; ci++) {
+          const v = String(row[ci] || '').trim().toUpperCase();
+          if (v === 'TOTAL' && ci > lastTotalCol) lastTotalCol = ci;
+        }
+      }
+
+      if (lastTotalCol > -1) return { cutAt: lastTotalCol, maxCol };
+
+      function isNum(v) {
+        const n = parseFloat(String(v || '').replace(/,/g, ''));
+        return !isNaN(n);
+      }
+
+      const dataRowIdxs = [];
+      rows.forEach((row, ri) => {
+        const posNums = row.filter(c => {
+          const v = String(c || '').trim();
+          return isNum(v) && !v.startsWith('-') && !v.startsWith('0') && parseFloat(v.replace(/,/g,'')) > 9;
+        }).length;
+        if (posNums >= 2) dataRowIdxs.push(ri);
+      });
+
+      let cutAt = maxCol;
+      for (let ci = 2; ci <= maxCol; ci++) {
+        const dataVals = dataRowIdxs
+          .map(ri => String(rows[ri][ci] || '').trim())
+          .filter(v => v !== '');
+        if (dataVals.length === 0) continue;
+        const allNeg = dataVals.every(v => /^-[\d,]+(\.\d+)?$/.test(v));
+        if (allNeg) {
+          cutAt = ci - 1;
+          break;
+        }
+      }
+
+      return { cutAt, maxCol };
+    }
+
+    // ════════════════════════════════════════════════════════════
+    // trimmedSheetData — shows ONLY the real data columns
+    // ════════════════════════════════════════════════════════════
+    function trimmedSheetData(id) {
+      const cached = sheetVariants.value[id];
+      if (!cached) return EMPTY_SHEET;
+      if (cached.trimmed) return cached.trimmed;
+
+      const s = cached.raw;
+      const { cutAt } = findDataCutoffCol(s.data);
+
+      // ── Step 4: build cleaned data using cols 0 … cutAt ───────
+      const keepCols = [];
+      for (let ci = 0; ci <= cutAt; ci++) {
+        keepCols.push(ci);
+      }
+
+      const data = s.data.map(row =>
+        keepCols.map(ci => String(row[ci] || '').trim())
+      );
+      cached.trimmed = { rows: s.rows, cols: keepCols.length, data };
+      return cached.trimmed;
+    }
+
+    function sheetDimensions(id) {
+      const s = sheets.value[id];
+      if (!s) return '';
+      return `${s.rows} × ${s.cols}`;
+    }
+
+    function filledCells(id) {
+      const s = sheets.value[id];
+      if (!s) return 0;
+      return s.data.reduce((total, row) =>
+        total + row.filter(c => c && String(c).trim()).length, 0);
+    }
+
+    function activeSheetData(id) {
+      return shouldUseStandardizedLayout(id) ? trimmedSheetData(id) : rawSheetData(id);
+    }
+
+    function previewSheetData(id) {
+      return cardPreviewData.value[id] || sheetData(id);
+    }
+
+    function sheetTheme(id) {
+      const s = sheets.value[id] || {};
+      return { ...defaultSheetTheme(), ...(s.theme || {}) };
+    }
+
+    function sheetCellStyles(id) {
+      const s = sheets.value[id] || {};
+      return s.cellStyles || {};
+    }
+
+    function sheetStyleMode(id) {
+      const s = sheets.value[id] || {};
+      if (s.styleMode) return s.styleMode;
+      const entry = entries.value.find(e => e.id === id);
+      return entry && entry.tags.includes('imported') ? 'styled' : 'plain';
+    }
+
+    function hasManualEdits(id) {
+      return Object.keys(sheetCellStyles(id)).length > 0;
+    }
+
+    function shouldUseStandardizedLayout(id) {
+      return displayMode.value === 'standardized' && sheetStyleMode(id) === 'styled' && !hasManualEdits(id);
+    }
+
+    function hasCustomCellStyle(id, ri, ci) {
+      return !!sheetCellStyles(id)[`${ri}-${ci}`];
+    }
+
+    function primaryFontName(fontFamily) {
+      return String(fontFamily || '').split(',')[0].trim().replace(/^['"]|['"]$/g, '');
+    }
+
+    function renderCellStyle(id, ri, ci) {
+      const format = sheetCellStyles(id)[`${ri}-${ci}`] || {};
+      const style = {};
+      if (format.fill) style['--custom-fill'] = format.fill;
+      if (format.text) style['--custom-text'] = format.text;
+      if (format.border) style.border = `1px solid ${format.border}`;
+      style.textAlign = format.align || 'left';
+      if (format.fontFamily) style.fontFamily = format.fontFamily;
+      if ('bold' in format) style.fontWeight = format.bold ? '700' : '400';
+      if ('italic' in format) style.fontStyle = format.italic ? 'italic' : 'normal';
+      return style;
+    }
+
+    function tableThemeStyle(id) {
+      const theme = sheetTheme(id);
+      return {
+        '--theme-header-dark': theme.headerDark,
+        '--theme-header-light': theme.headerLight,
+        '--theme-code': theme.code,
+        '--theme-name': theme.name,
+        '--theme-alt': theme.alt,
+        '--theme-total': theme.total,
+        '--theme-highlight': theme.highlight,
+        '--theme-note': theme.note,
+      };
+    }
+
+    function filledCellsByMode(id, mode = 'raw') {
+      const s = mode === 'raw' ? rawSheetData(id) : trimmedSheetData(id);
+      return s.data.reduce((total, row) =>
+        total + row.filter(c => c && String(c).trim()).length, 0);
+    }
+
+    const displayModeLabel = computed(() => {
+      if (viewEntry.value && hasManualEdits(viewEntry.value.id)) return 'Exact edit view';
+      return displayMode.value === 'raw' ? 'Raw CSV view' : 'Standardized view';
+    });
+
+    const entriesWithSheet = computed(() =>
+      entries.value.filter(e => sheets.value[e.id] && sheets.value[e.id].data)
+    );
+
+    const filteredEntries = computed(() => {
+      let r = [...entriesWithSheet.value];
+      if (catFilter.value) r = r.filter(e => e.category === catFilter.value);
+      if (search.value.trim()) {
+        const q = search.value.toLowerCase();
+        r = r.filter(e =>
+          e.title.toLowerCase().includes(q) ||
+          e.category.toLowerCase().includes(q) ||
+          e.tags.some(t => t.toLowerCase().includes(q))
+        );
+      }
+      return r;
+    });
+
+    const cardPreviewData = computed(() => {
+      const previews = {};
+      filteredEntries.value.forEach(entry => {
+        previews[entry.id] = sheetData(entry.id);
+      });
+      return previews;
+    });
+
+    const uniqueCategories = computed(() =>
+      new Set(entries.value.map(e => e.category)).size
+    );
+
+    function normalizeWorkbookSheet(sheet, fallbackName = 'Sheet 1', fallbackId = 'sheet-1') {
+      const rows = Math.max(0, parseInt(sheet?.rows, 10) || 0);
+      const cols = Math.max(0, parseInt(sheet?.cols, 10) || 0);
+      const sourceData = Array.isArray(sheet?.data) ? sheet.data : [];
+      const data = Array.from({ length: rows }, (_, ri) => {
+        const sourceRow = Array.isArray(sourceData[ri]) ? sourceData[ri] : [];
+        const next = sourceRow.slice(0, cols).map(cell => String(cell ?? ''));
+        while (next.length < cols) next.push('');
+        return next;
+      });
+      return {
+        id: String(sheet?.id || fallbackId),
+        name: String(sheet?.name || fallbackName),
+        rows,
+        cols,
+        data,
+        theme: sheet?.theme ? { ...sheet.theme } : undefined,
+        cellStyles: sheet?.cellStyles ? { ...sheet.cellStyles } : undefined,
+        styleMode: sheet?.styleMode || undefined,
+        ...(sheet?.nativeChart ? { nativeChart: JSON.parse(JSON.stringify(sheet.nativeChart)) } : {}),
+      };
+    }
+
+    function workbookSheetVariantsFor(id) {
+      const stored = sheets.value[id];
+      if (!stored || (!stored.data && !stored.workbook?.sheets?.length)) return null;
+      const workbookSheets = Array.isArray(stored.workbook?.sheets) && stored.workbook.sheets.length
+        ? stored.workbook.sheets.map((sheet, index) =>
+            normalizeWorkbookSheet(sheet, sheet?.name || `Sheet ${index + 1}`, sheet?.id || `sheet-${index + 1}`)
+          )
+        : [normalizeWorkbookSheet(stored, 'Sheet 1', 'sheet-1')];
+      const sheetsById = {};
+      workbookSheets.forEach(sheet => {
+        sheetsById[sheet.id] = { raw: sheet, trimmed: null };
+      });
+      let activeSheetId = String(stored.workbook?.activeSheetId || '');
+      if (!sheetsById[activeSheetId]) activeSheetId = workbookSheets[0]?.id || 'sheet-1';
+      return { activeSheetId, sheets: sheetsById };
+    }
+
+    function workbookSheets(id) {
+      const workbook = workbookSheetVariantsFor(id);
+      return workbook ? Object.values(workbook.sheets).map(variant => variant.raw) : [];
+    }
+
+    function resolveSheetId(id, requestedSheetId = null) {
+      const workbook = workbookSheetVariantsFor(id);
+      if (!workbook) return null;
+      if (requestedSheetId && workbook.sheets[requestedSheetId]) return requestedSheetId;
+      if (viewEntry.value?.id === id && activeWorkbookSheetId.value && workbook.sheets[activeWorkbookSheetId.value]) {
+        return activeWorkbookSheetId.value;
+      }
+      return workbook.activeSheetId || Object.keys(workbook.sheets)[0] || null;
+    }
+
+    function rawSheetData(id, sheetId = null) {
+      const workbook = workbookSheetVariantsFor(id);
+      const resolvedSheetId = resolveSheetId(id, sheetId);
+      return resolvedSheetId ? workbook?.sheets?.[resolvedSheetId]?.raw || EMPTY_SHEET : EMPTY_SHEET;
+    }
+
+    function trimmedSheetData(id, sheetId = null) {
+      const workbook = workbookSheetVariantsFor(id);
+      const resolvedSheetId = resolveSheetId(id, sheetId);
+      const cached = resolvedSheetId ? workbook?.sheets?.[resolvedSheetId] : null;
+      if (!cached) return EMPTY_SHEET;
+      if (cached.trimmed) return cached.trimmed;
+
+      const s = cached.raw;
+      const { cutAt } = findDataCutoffCol(s.data);
+      const keepCols = [];
+      for (let ci = 0; ci <= cutAt; ci++) keepCols.push(ci);
+      const data = s.data.map(row =>
+        keepCols.map(ci => String(row[ci] || '').trim())
+      );
+      cached.trimmed = { rows: s.rows, cols: keepCols.length, data };
+      return cached.trimmed;
+    }
+
+    function sheetData(id, sheetId = null) {
+      return displayMode.value === 'raw' ? rawSheetData(id, sheetId) : trimmedSheetData(id, sheetId);
+    }
+
+    function sheetDimensions(id, sheetId = null) {
+      const s = rawSheetData(id, sheetId);
+      if (!s.rows && !s.cols) return '';
+      return `${s.rows} × ${s.cols}`;
+    }
+
+    function filledCells(id, sheetId = null) {
+      const s = rawSheetData(id, sheetId);
+      return s.data.reduce((total, row) =>
+        total + row.filter(c => c && String(c).trim()).length, 0);
+    }
+
+    function activeSheetData(id, sheetId = null) {
+      return shouldUseStandardizedLayout(id, sheetId) ? trimmedSheetData(id, sheetId) : rawSheetData(id, sheetId);
+    }
+
+    function previewSheetData(id) {
+      return cardPreviewData.value[id] || sheetData(id);
+    }
+
+    function sheetTheme(id, sheetId = null) {
+      const s = rawSheetData(id, sheetId) || {};
+      return { ...defaultSheetTheme(), ...(s.theme || {}) };
+    }
+
+    function sheetCellStyles(id, sheetId = null) {
+      const s = rawSheetData(id, sheetId) || {};
+      return s.cellStyles || {};
+    }
+
+    function sheetStyleMode(id, sheetId = null) {
+      const s = rawSheetData(id, sheetId) || {};
+      if (s.styleMode) return s.styleMode;
+      return isCbmsStyledSheet(s.data) ? 'styled' : 'plain';
+    }
+
+    function hasManualEdits(id, sheetId = null) {
+      return Object.keys(sheetCellStyles(id, sheetId)).length > 0;
+    }
+
+    function shouldUseStandardizedLayout(id, sheetId = null) {
+      return displayMode.value === 'standardized' && sheetStyleMode(id, sheetId) === 'styled' && !hasManualEdits(id, sheetId);
+    }
+
+    function hasCustomCellStyle(id, ri, ci, sheetId = null) {
+      return !!sheetCellStyles(id, sheetId)[`${ri}-${ci}`];
+    }
+
+    function renderCellStyle(id, ri, ci, sheetId = null) {
+      const format = sheetCellStyles(id, sheetId)[`${ri}-${ci}`] || {};
+      const style = {};
+      if (format.fill) style['--custom-fill'] = format.fill;
+      if (format.text) style['--custom-text'] = format.text;
+      if (format.border) style.border = `1px solid ${format.border}`;
+      style.textAlign = format.align || 'left';
+      if (format.fontFamily) style.fontFamily = format.fontFamily;
+      if ('bold' in format) style.fontWeight = format.bold ? '700' : '400';
+      if ('italic' in format) style.fontStyle = format.italic ? 'italic' : 'normal';
+      return style;
+    }
+
+    function tableThemeStyle(id, sheetId = null) {
+      const theme = sheetTheme(id, sheetId);
+      return {
+        '--theme-header-dark': theme.headerDark,
+        '--theme-header-light': theme.headerLight,
+        '--theme-code': theme.code,
+        '--theme-name': theme.name,
+        '--theme-alt': theme.alt,
+        '--theme-total': theme.total,
+        '--theme-highlight': theme.highlight,
+        '--theme-note': theme.note,
+      };
+    }
+
+    function filledCellsByMode(id, mode = 'raw', sheetId = null) {
+      const s = mode === 'raw' ? rawSheetData(id, sheetId) : trimmedSheetData(id, sheetId);
+      return s.data.reduce((total, row) =>
+        total + row.filter(c => c && String(c).trim()).length, 0);
+    }
+
+    function currentViewSheetMeta() {
+      if (!viewEntry.value) return null;
+      const currentId = resolveSheetId(viewEntry.value.id, activeWorkbookSheetId.value);
+      return workbookSheets(viewEntry.value.id).find(sheet => sheet.id === currentId) || null;
+    }
+
+    function currentViewSheetData() {
+      if (!viewEntry.value) return EMPTY_SHEET;
+      return activeSheetData(viewEntry.value.id, activeWorkbookSheetId.value);
+    }
+
+    function currentViewSheetName() {
+      return currentViewSheetMeta()?.name || 'Sheet 1';
+    }
+
+    function currentChartData() {
+      if (!viewEntry.value) return null;
+      return chartData(viewEntry.value.id, activeWorkbookSheetId.value);
+    }
+
+    function selectWorkbookSheet(sheetId) {
+      activeWorkbookSheetId.value = sheetId;
+      downloadOpen.value = false;
+    }
+
+    // ════════════════════════════════════════════════════════════
+    // Helper functions
+    // ════════════════════════════════════════════════════════════
+    function getRowText(row) {
+      return row.map(c => String(c || '').trim()).join(' ');
+    }
+    function isRowEmpty(row) {
+      return row.every(c => !c || !String(c).trim());
+    }
+    function getNonEmpty(row) {
+      return row.filter(c => c && String(c).trim());
+    }
+
+    function hasDataNumbers(row) {
+      return row.some(c => {
+        const v = String(c || '').trim().replace(/,/g, '');
+        if (!/^\d+$/.test(v)) return false;
+        if (/^0\d+$/.test(String(c || '').trim())) return false;
+        return parseInt(v) > 9;
+      });
+    }
+    function isCbmsStyledSheet(rows) {
+      const sample = (rows || []).slice(0, 6).map(row => row.map(c => String(c || '').trim().toUpperCase()).join(' ')).join(' ');
+      const signals = ['LOCATION', 'PSA', 'BRGY', 'CBMS', 'POPCEN', 'MALE HEADED', 'FEMALE HEADED'];
+      return signals.filter(signal => sample.includes(signal)).length >= 2;
+    }
+
+    // ════════════════════════════════════════════════════════════
+    // rowClass — assign CBMS colour class to each row
+    // ════════════════════════════════════════════════════════════
+    function rowClass(row, ri) {
+      if (isRowEmpty(row)) return 'row-empty';
+
+      const txt       = getRowText(row).toLowerCase();
+      const rawTxt    = getRowText(row);
+      const firstCell = String(row[0] || '').trim().toLowerCase();
+      const nonEmpty  = getNonEmpty(row);
+
+      if (
+        /^note[:\s]/i.test(firstCell) ||
+        /^source[:\s]/i.test(firstCell) ||
+        txt.includes('male-headed households have') ||
+        txt.includes('female-headed households have') ||
+        txt.startsWith('note:') ||
+        txt.startsWith('source:')
+      ) return 'row-note';
+
+      if (ri === 0) return 'row-highlight';
+
+      if (/\btotal\b/i.test(txt) &&
+          !txt.includes('male-headed') &&
+          !txt.includes('female-headed')) return 'row-total';
+
+      if (ri === 1 && !hasDataNumbers(row)) return 'row-title';
+
+      const isAllCaps = rawTxt.trim().length > 3 &&
+                        rawTxt.toUpperCase() === rawTxt &&
+                        /[A-Z]/.test(rawTxt);
+      if (isAllCaps && !hasDataNumbers(row)) {
+        return ri <= 4 ? 'row-header-dark' : 'row-header-light';
+      }
+
+      if (!hasDataNumbers(row) && nonEmpty.length <= 5 && ri <= 5) {
+        return ri <= 3 ? 'row-header-dark' : 'row-header-light';
+      }
+
+      return ri % 2 === 0 ? 'row-data-alt' : 'row-data';
+    }
+
+    // ════════════════════════════════════════════════════════════
+    // cellClass — assign class to individual cells
+    // ════════════════════════════════════════════════════════════
+    function cellClass(id, row, ri, ci, sheetId = null) {
+      if (!isCbmsStyledSheet(activeSheetData(id, sheetId).data)) return '';
+      const rc        = rowClass(row, ri);
+      const isDataRow = rc === 'row-data' || rc === 'row-data-alt';
+
+      if (isDataRow) {
+        if (ci === 0) return 'cell-code';
+        if (ci === 1) return 'cell-location';
+
+        const v = String(row[ci] || '').trim();
+        if (/^\d{2,3}:\d{1,3}$/.test(v)) return 'cell-ratio';
+      }
+      return '';
+    }
+
+    function tableRowClass(id, row, ri, sheetId = null) {
+      return shouldUseStandardizedLayout(id, sheetId) ? rowClass(row, ri) : '';
+    }
+
+    function tableCellClass(id, row, ri, ci, sheetId = null) {
+      return shouldUseStandardizedLayout(id, sheetId) ? cellClass(id, row, ri, ci, sheetId) : '';
+    }
+
+    // ════════════════════════════════════════════════════════════
+    // CHART — diverging bar
+    // earlier year → negative bars (red), later year → positive bars (blue)
+    //
+    // Handles BOTH CSV types automatically:
+    //   • Household (Headed) CSVs  — barangay labels, "MALE HEADED"/"FEMALE HEADED"
+    //   • Population pyramid CSVs — age-group labels, plain "MALE"/"FEMALE"
+    // ════════════════════════════════════════════════════════════
+    let chartInstance = null;
+    const chartHoverStates = {};
+
+    function parseNum(cell) {
+      const v = parseFloat(String(cell || '').replace(/,/g, ''));
+      return isNaN(v) ? null : v;
+    }
+
+    const CHART_COLORS = ['#4f6ef7', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#f97316', '#84cc16', '#ec4899', '#14b8a6'];
+
+    function isDateLikeLabel(value) {
+      const v = String(value || '').trim();
+      if (!v) return false;
+      return /^(19|20)\d{2}[-/](0?[1-9]|1[0-2])([-/](0?[1-9]|[12]\d|3[01]))?$/.test(v) ||
+             /^(0?[1-9]|[12]\d|3[01])[-/](0?[1-9]|1[0-2])[-/](19|20)\d{2}$/.test(v) ||
+             /^(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*[\s-]*(19|20)?\d{0,4}$/i.test(v) ||
+             /^(q[1-4]|week\s*\d+|w\d+)$/i.test(v);
+    }
+
+    function isMonthOnlyLabel(value) {
+      return /^(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)(uary|ch|il|e|y|ust|tember|ober|ember)?$/i
+        .test(String(value || '').trim());
+    }
+
+    function colorAt(index, alpha = 1) {
+      const hex = CHART_COLORS[index % CHART_COLORS.length];
+      if (alpha === 1) return hex;
+      const bigint = parseInt(hex.slice(1), 16);
+      const r = (bigint >> 16) & 255;
+      const g = (bigint >> 8) & 255;
+      const b = bigint & 255;
+      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    }
+
+    function buildPieChartData(data, scanMax) {
+      const pairs = [];
+      for (let ri = 0; ri < data.length; ri++) {
+        const row = data[ri].slice(0, scanMax + 1).map(c => String(c || '').trim());
+        const nonEmpty = row.filter(Boolean);
+        if (nonEmpty.length < 2 || nonEmpty.length > 4) continue;
+        const numericCells = nonEmpty.filter(v => parseNum(v) !== null);
+        const textCells = nonEmpty.filter(v => parseNum(v) === null);
+        if (numericCells.length !== 1 || textCells.length !== 1) continue;
+        const value = parseNum(numericCells[0]);
+        if (value === null || value <= 0) continue;
+        pairs.push({ label: textCells[0], value });
+      }
+      const uniqueLabels = [...new Set(pairs.map(p => p.label))];
+      if (pairs.length < 3 || pairs.length > 12 || uniqueLabels.length !== pairs.length) return null;
+      return {
+        type: 'pie',
+        labels: pairs.map(p => p.label),
+        datasets: [{
+          label: 'Values',
+          data: pairs.map(p => p.value),
+          backgroundColor: pairs.map((_, i) => colorAt(i, 0.85)),
+          borderColor: pairs.map((_, i) => colorAt(i)),
+          borderWidth: 1,
+        }]
+      };
+    }
+
+    function buildLineChartData(data, scanMax) {
+      let firstDataRow = -1;
+      for (let ri = 0; ri < data.length; ri++) {
+        const row = data[ri].slice(0, scanMax + 1);
+        const first = String(row[0] || '').trim();
+        const numericCount = row.slice(1).filter(v => parseNum(v) !== null).length;
+        if (isDateLikeLabel(first) && numericCount >= 1) { firstDataRow = ri; break; }
+      }
+      if (firstDataRow === -1) return null;
+
+      const headerRow = firstDataRow > 0 ? data[firstDataRow - 1].slice(0, scanMax + 1) : [];
+      const dataRows = data.slice(firstDataRow).filter(row => {
+        const first = String(row[0] || '').trim();
+        return isDateLikeLabel(first) && row.slice(1, scanMax + 1).some(v => parseNum(v) !== null);
+      });
+      if (dataRows.length < 2) return null;
+
+      const seriesCols = [];
+      for (let ci = 1; ci <= scanMax; ci++) {
+        const count = dataRows.filter(row => parseNum(row[ci]) !== null).length;
+        if (count >= 2) seriesCols.push(ci);
+      }
+      if (!seriesCols.length || seriesCols.length > 8) return null;
+
+      return {
+        type: 'line',
+        labels: dataRows.map(row => String(row[0] || '').trim()),
+        datasets: seriesCols.map((ci, i) => ({
+          label: String(headerRow[ci] || colLetter(ci) || `Series ${i + 1}`).trim() || `Series ${i + 1}`,
+          data: dataRows.map(row => parseNum(row[ci])),
+          borderColor: colorAt(i),
+          backgroundColor: colorAt(i, 0.18),
+          pointBackgroundColor: colorAt(i),
+          pointRadius: 3,
+          pointHoverRadius: 4,
+          tension: 0.28,
+          spanGaps: true,
+          fill: false,
+        }))
+      };
+    }
+
+    function buildGenericBarChartData(data, scanMax) {
+      let firstDataRow = -1;
+      for (let ri = 0; ri < data.length; ri++) {
+        const row = data[ri].slice(0, scanMax + 1);
+        const text = row.filter(v => String(v || '').trim() && parseNum(v) === null);
+        const nums = row.filter(v => parseNum(v) !== null);
+        if (text.length >= 1 && nums.length >= 1) { firstDataRow = ri; break; }
+      }
+      if (firstDataRow === -1) return null;
+
+      const headerRow = firstDataRow > 0 ? data[firstDataRow - 1].slice(0, scanMax + 1) : [];
+      const dataRows = data.slice(firstDataRow).filter(row => {
+        const cells = row.slice(0, scanMax + 1).map(v => String(v || '').trim());
+        const label = cells.find(v => v && parseNum(v) === null);
+        const numericCount = cells.filter(v => parseNum(v) !== null).length;
+        return !!label && numericCount >= 1;
+      });
+      if (dataRows.length < 2) return null;
+
+      const labels = dataRows.map(row => row.map(v => String(v || '').trim()).find(v => v && parseNum(v) === null) || '');
+      const seriesCols = [];
+      for (let ci = 0; ci <= scanMax; ci++) {
+        const count = dataRows.filter(row => parseNum(row[ci]) !== null).length;
+        if (count >= 2) seriesCols.push(ci);
+      }
+      if (!seriesCols.length || seriesCols.length > 6) return null;
+
+      return {
+        type: 'bar',
+        variant: 'generic',
+        labels,
+        datasets: seriesCols.map((ci, i) => ({
+          label: String(headerRow[ci] || `Series ${i + 1}`).trim() || `Series ${i + 1}`,
+          data: dataRows.map(row => parseNum(row[ci])),
+          backgroundColor: colorAt(i, 0.8),
+          borderColor: colorAt(i),
+          borderWidth: 1,
+          borderRadius: 4,
+        }))
+      };
+    }
+
+    function extractChartData(id, sheetId = null) {
+      const s = rawSheetData(id, sheetId);
+      if (!s || !s.data || s.data.length < 2) return null;
+      const data = s.data;
+
+      // ── Step 1: find cutoff column using the same logic as the table ──
+      const { cutAt: scanMax } = findDataCutoffCol(data);
+      const pieChart = buildPieChartData(data, scanMax);
+      if (pieChart) return pieChart;
+      const genericBarChart = buildGenericBarChartData(data, scanMax);
+      const lineChart = buildLineChartData(data, scanMax);
+      if (
+        genericBarChart &&
+        lineChart &&
+        Array.isArray(lineChart.labels) &&
+        lineChart.labels.length >= 2 &&
+        lineChart.labels.every(isMonthOnlyLabel)
+      ) return genericBarChart;
+      if (lineChart) return lineChart;
+
+      // ── Step 2: find header row containing MALE and FEMALE ──
+      let colHeaderRow = null, colHeaderIdx = -1;
+      for (let i = 0; i < Math.min(8, data.length); i++) {
+        const rowSlice = data[i].slice(0, scanMax + 1);
+        const t = rowSlice.map(c => String(c || '').trim()).join(' ').toUpperCase();
+        if (t.includes('MALE') && t.includes('FEMALE')) {
+          colHeaderRow = data[i]; colHeaderIdx = i; break;
+        }
+      }
+      if (!colHeaderRow) return null;
+
+      // ── Step 3: detect CSV type ──
+      // "Headed" type  → headers contain the word "HEADED"
+      // "Population pyramid" type → plain "MALE" / "FEMALE" without "HEADED"
+      const headerJoined = colHeaderRow.slice(0, scanMax + 1)
+        .map(c => String(c || '').toUpperCase()).join(' ');
+      const isHeadedType = headerJoined.includes('HEADED');
+
+      // ── Step 4: build combined per-column header string ──
+      // Scan ALL rows 0..colHeaderIdx to handle multi-row merged headers
+      const combinedHeader = Array(scanMax + 1).fill('');
+      for (let ri = 0; ri <= colHeaderIdx; ri++) {
+        data[ri].forEach((c, ci) => {
+          if (ci > scanMax) return;
+          const t = String(c || '').trim().toUpperCase();
+          if (t) combinedHeader[ci] += ' ' + t;
+        });
+      }
+
+      // ── Step 5: collect Male / Female column indices ──
+      // Uses last token to avoid "FEMALE".includes("MALE") false match
+      const maleIdxs = [], femaleIdxs = [];
+      combinedHeader.forEach((h, ci) => {
+        if (!h.trim()) return;
+        const tokens    = h.trim().split(/\s+/);
+        const lastToken = tokens[tokens.length - 1] || '';
+
+        // Primary check: last token is the most specific label
+        const isMale   = lastToken === 'MALE'   || h.endsWith(' MALE');
+        const isFemale = lastToken === 'FEMALE' || h.endsWith(' FEMALE');
+
+        // Fallback: FEMALE anywhere → female; MALE without FEMALE → male
+        const hasFemale   = h.includes('FEMALE');
+        const hasMaleOnly = h.includes('MALE') && !hasFemale;
+
+        if ((isMale || hasMaleOnly) && !femaleIdxs.includes(ci) && !maleIdxs.includes(ci))
+          maleIdxs.push(ci);
+        if ((isFemale || hasFemale) && !femaleIdxs.includes(ci))
+          femaleIdxs.push(ci);
+      });
+
+      // Sort so [0] = earlier/first year, [1] = later/second year
+      maleIdxs.sort((a, b) => a - b);
+      femaleIdxs.sort((a, b) => a - b);
+
+      // ── Step 6: auto-detect year labels from header rows ──
+      const yearLabels = [];
+      for (let ri = 0; ri < Math.min(8, data.length); ri++) {
+        data[ri].forEach(c => {
+          const v = String(c || '').trim();
+          if (/^(19|20)\d{2}$/.test(v) && !yearLabels.includes(v))
+            yearLabels.push(v);
+        });
+      }
+      yearLabels.sort();
+      const year1 = yearLabels[0] || '2022';  // earlier year → negative (red)
+      const year2 = yearLabels[1] || '2024';  // later year  → positive (blue)
+
+      // ── Step 7: collect data rows ──
+      const dataRows = [];
+      for (let i = colHeaderIdx + 1; i < data.length; i++) {
+        const row = data[i];
+        if (isRowEmpty(row)) continue;
+        const rc = rowClass(row, i);
+        if (['row-total','row-note','row-highlight','row-title',
+             'row-header-dark','row-header-light','row-empty'].includes(rc)) continue;
+
+        // Label detection:
+        // Age-pyramid CSVs: col 0 holds "0-4 years old", "5-9 years old" etc.
+        // Barangay CSVs:    col 0 = PSA code (numeric), col 1 = barangay name
+        let name = '';
+        const textCells = row
+          .map(cell => String(cell || '').trim())
+          .filter(cell => cell && !/^-?[\d,]+(\.\d+)?$/.test(cell) && !/^\d{2,3}:\d{1,3}$/.test(cell));
+
+        const ageLike = textCells.find(cell => /\d+.*year/i.test(cell) || /^\d+-\d+/.test(cell));
+        name = ageLike || textCells[0] || '';
+        if (!name) continue;
+
+        // Must have at least one positive number within the real data columns
+        const hasNum = row.slice(2, scanMax + 1).some(c => {
+          const n = parseNum(c);
+          return n !== null && n > 0;
+        });
+        if (!hasNum) continue;
+        dataRows.push({ name, row });
+      }
+      if (dataRows.length === 0) return null;
+
+      const labels  = dataRows.map(d => d.name);
+      const male1   = maleIdxs[0];    // earlier year Male
+      const female1 = femaleIdxs[0];  // earlier year Female
+      const male2   = maleIdxs[1];    // later year Male
+      const female2 = femaleIdxs[1];  // later year Female
+
+      const suffix   = isHeadedType ? ' Headed' : '';
+      const datasets = [];
+
+      // ── Later-year POSITIVE bars (above zero, blue) ───────────
+      if (male2 !== undefined) datasets.push({
+        label: `${year2} Male${suffix}`,
+        data: dataRows.map(d => Math.abs(parseNum(d.row[male2]) || 0)),
+        backgroundColor: '#3a5fc8',
+        borderColor: '#3a5fc8',
+        borderWidth: 0,
+        borderRadius: 0,
+        stack: year2,
+      });
+      if (female2 !== undefined) datasets.push({
+        label: `${year2} Female${suffix}`,
+        data: dataRows.map(d => Math.abs(parseNum(d.row[female2]) || 0)),
+        backgroundColor: '#a8c4f0',
+        borderColor: '#a8c4f0',
+        borderWidth: 0,
+        borderRadius: 0,
+        stack: year2,
+      });
+
+      // ── Earlier-year NEGATIVE bars (below zero, red) ──────────
+      if (male1 !== undefined) datasets.push({
+        label: `${year1} Male${suffix}`,
+        data: dataRows.map(d => -Math.abs(parseNum(d.row[male1]) || 0)),
+        backgroundColor: '#d32f2f',
+        borderColor: '#d32f2f',
+        borderWidth: 0,
+        borderRadius: 0,
+        stack: year1,
+      });
+      if (female1 !== undefined) datasets.push({
+        label: `${year1} Female${suffix}`,
+        data: dataRows.map(d => -Math.abs(parseNum(d.row[female1]) || 0)),
+        backgroundColor: '#f4a9a8',
+        borderColor: '#f4a9a8',
+        borderWidth: 0,
+        borderRadius: 0,
+        stack: year1,
+      });
+
+      if (datasets.length) return { type: 'bar', variant: 'population', labels, datasets };
+
+      return genericBarChart;
+    }
+
+    function nativeChartData(id, sheetId = null) {
+      const nativeChart = rawSheetData(id, sheetId)?.nativeChart;
+      return nativeChart ? JSON.parse(JSON.stringify(nativeChart)) : null;
+    }
+
+    function chartData(id, sheetId = null) {
+      return nativeChartData(id, sheetId) || extractChartData(id, sheetId);
+    }
+
+    function isPieLikeChartType(type) {
+      return type === 'pie' || type === 'doughnut';
+    }
+
+    function formatChartValue(value) {
+      const numericValue = Number(value);
+      if (!Number.isFinite(numericValue)) return String(value ?? '');
+      return numericValue.toLocaleString(undefined, {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: Number.isInteger(numericValue) ? 0 : 2,
+      });
+    }
+
+    function formatChartPercent(value) {
+      return `${Number(value || 0).toLocaleString(undefined, {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 1,
+      })}%`;
+    }
+
+    function datasetTotal(dataset) {
+      return (dataset?.data || []).reduce((sum, value) => {
+        const numericValue = Number(value);
+        return Number.isFinite(numericValue) ? sum + Math.abs(numericValue) : sum;
+      }, 0);
+    }
+
+    function resolveChartPointColor(dataset, dataIndex, fallback = '#bfdbfe') {
+      const backgroundColor = Array.isArray(dataset?.backgroundColor)
+        ? dataset.backgroundColor[dataIndex]
+        : dataset?.backgroundColor;
+      const borderColor = Array.isArray(dataset?.borderColor)
+        ? dataset.borderColor[dataIndex]
+        : dataset?.borderColor;
+      return backgroundColor || borderColor || fallback;
+    }
+
+    function chartPointSeriesText(chart, datasetIndex, dataIndex) {
+      const dataset = chart?.data?.datasets?.[datasetIndex];
+      const rawValue = dataset?.data?.[dataIndex];
+      const numericValue = Number(rawValue);
+      const label = dataset?.label || 'Value';
+      const valueText = Number.isFinite(numericValue)
+        ? formatChartValue(numericValue)
+        : String(rawValue ?? '');
+      const chartType = chart?.config?.type || chart?.data?.datasets?.[datasetIndex]?.type || '';
+
+      if (isPieLikeChartType(chartType) && Number.isFinite(numericValue)) {
+        const total = datasetTotal(dataset);
+        if (total > 0) {
+          const percent = (Math.abs(numericValue) / total) * 100;
+          return `${label}: ${valueText} (${formatChartPercent(percent)})`;
+        }
+      }
+
+      return `${label}: ${valueText}`;
+    }
+
+    function normalizeActiveElements(activeElements) {
+      return (activeElements || [])
+        .map(el => ({
+          datasetIndex: el.datasetIndex,
+          dataIndex: el.dataIndex,
+        }))
+        .filter(el =>
+          Number.isInteger(el.datasetIndex) &&
+          Number.isInteger(el.dataIndex)
+        );
+    }
+
+    function tooltipAnchorForElements(chart, activeElements) {
+      const points = activeElements
+        .map(({ datasetIndex, dataIndex }) =>
+          chart.getDatasetMeta(datasetIndex)?.data?.[dataIndex]?.tooltipPosition?.()
+        )
+        .filter(Boolean);
+
+      if (!points.length) {
+        return { x: chart.width / 2, y: chart.height / 2 };
+      }
+
+      const totals = points.reduce((acc, point) => ({
+        x: acc.x + point.x,
+        y: acc.y + point.y,
+      }), { x: 0, y: 0 });
+
+      return {
+        x: totals.x / points.length,
+        y: totals.y / points.length,
+      };
+    }
+
+    function roundedRect(ctx, x, y, width, height, radius) {
+      const r = Math.min(radius, width / 2, height / 2);
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.arcTo(x + width, y, x + width, y + height, r);
+      ctx.arcTo(x + width, y + height, x, y + height, r);
+      ctx.arcTo(x, y + height, x, y, r);
+      ctx.arcTo(x, y, x + width, y, r);
+      ctx.closePath();
+    }
+
+    function drawExportTooltip(chart, targetCtx, activeElements) {
+      const primary = normalizeActiveElements(activeElements)[0];
+      if (!primary) return;
+
+      const dataset = chart.data.datasets?.[primary.datasetIndex];
+      const label = chart.data.labels?.[primary.dataIndex];
+      const seriesText = chartPointSeriesText(chart, primary.datasetIndex, primary.dataIndex);
+      const point = chart.getDatasetMeta(primary.datasetIndex)?.data?.[primary.dataIndex]?.tooltipPosition?.();
+      if (!point) return;
+
+      const bg = '#1e293b';
+      const titleFont = "700 12px 'Plus Jakarta Sans'";
+      const bodyFont = "500 11px 'Plus Jakarta Sans'";
+      const paddingX = 12;
+      const paddingY = 10;
+      const lineGap = 8;
+      const colorBoxSize = 12;
+      const caretSize = 10;
+
+      targetCtx.save();
+      targetCtx.font = titleFont;
+      const titleWidth = targetCtx.measureText(String(label || '')).width;
+      targetCtx.font = bodyFont;
+      const bodyWidth = targetCtx.measureText(seriesText).width + colorBoxSize + 8;
+
+      const width = Math.max(titleWidth, bodyWidth) + paddingX * 2;
+      const height = paddingY * 2 + 12 + lineGap + 11;
+      const desiredX = point.x - 22;
+      const desiredY = point.y - height - 18;
+      const boxX = Math.max(8, Math.min(desiredX, chart.width - width - 8));
+      const boxY = Math.max(8, desiredY);
+
+      targetCtx.fillStyle = bg;
+      roundedRect(targetCtx, boxX, boxY, width, height, 8);
+      targetCtx.fill();
+
+      targetCtx.beginPath();
+      targetCtx.moveTo(boxX, point.y - caretSize / 2);
+      targetCtx.lineTo(boxX - caretSize, point.y);
+      targetCtx.lineTo(boxX, point.y + caretSize / 2);
+      targetCtx.closePath();
+      targetCtx.fill();
+
+      targetCtx.textBaseline = 'top';
+      targetCtx.fillStyle = '#ffffff';
+      targetCtx.font = titleFont;
+      targetCtx.fillText(String(label || ''), boxX + paddingX, boxY + paddingY);
+
+      const bodyY = boxY + paddingY + 12 + lineGap;
+      targetCtx.fillStyle = resolveChartPointColor(dataset, primary.dataIndex);
+      targetCtx.fillRect(boxX + paddingX, bodyY, colorBoxSize, colorBoxSize);
+
+      targetCtx.fillStyle = '#e2e8f0';
+      targetCtx.font = bodyFont;
+      targetCtx.fillText(seriesText, boxX + paddingX + colorBoxSize + 8, bodyY + 1);
+      targetCtx.restore();
+    }
+
+    function pickFallbackExportTooltip(chart) {
+      const datasets = chart?.data?.datasets || [];
+      const preferredDatasetIndex = datasets.findIndex(ds =>
+        /2024\s+female/i.test(String(ds?.label || '')) ||
+        /\bfemale\b/i.test(String(ds?.label || ''))
+      );
+
+      const datasetOrder = preferredDatasetIndex >= 0
+        ? [preferredDatasetIndex, ...datasets.map((_, i) => i).filter(i => i !== preferredDatasetIndex)]
+        : datasets.map((_, i) => i);
+
+      for (const datasetIndex of datasetOrder) {
+        const series = datasets[datasetIndex]?.data || [];
+        for (let dataIndex = 0; dataIndex < series.length; dataIndex++) {
+          const rawValue = Number(series[dataIndex]);
+          if (Number.isFinite(rawValue) && rawValue !== 0) {
+            return [{ datasetIndex, dataIndex }];
+          }
+        }
+      }
+
+      return [];
+    }
+
+    function activeChartCacheKey(entryId, sheetId = null) {
+      return `${entryId}:${sheetId || resolveSheetId(entryId) || 'sheet-1'}`;
+    }
+
+    function getChartImageForExport(entryId, sheetId = null) {
+      const canvas = document.getElementById('active-chart');
+      if (!canvas || typeof canvas.toDataURL !== 'function') return null;
+      if (!chartInstance || viewEntry.value?.id !== entryId) return canvas.toDataURL('image/png');
+
+      const hoverState = chartHoverStates[activeChartCacheKey(entryId, sheetId)] || [];
+      const nextActive = normalizeActiveElements(hoverState).length
+        ? normalizeActiveElements(hoverState)
+        : pickFallbackExportTooltip(chartInstance);
+      if (!nextActive.length) return canvas.toDataURL('image/png');
+      const exportCanvas = document.createElement('canvas');
+      exportCanvas.width = canvas.width;
+      exportCanvas.height = canvas.height;
+      const exportCtx = exportCanvas.getContext('2d');
+      if (!exportCtx) return canvas.toDataURL('image/png');
+
+      exportCtx.drawImage(canvas, 0, 0);
+      drawExportTooltip(chartInstance, exportCtx, nextActive);
+      return exportCanvas.toDataURL('image/png');
+    }
+
+    async function renderChart(id, sheetId = null) {
+      const cd = chartData(id, sheetId);
+      if (!cd) return;
+
+      try {
+        await ensureChartLib();
+      } catch (err) {
+        showToast('Chart library failed to load.', 'error');
+        return;
+      }
+
+      nextTick(() => {
+        setTimeout(() => {
+          if (!viewEntry.value || viewEntry.value.id !== id) return;
+          const canvas = document.getElementById('active-chart');
+          if (!canvas) return;
+          if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
+          const chartKey = activeChartCacheKey(id, sheetId);
+
+          // ── Compute symmetric y-axis max ─────────────────────
+          const isPopulation = cd.variant === 'population';
+          const isNativeExcel = cd.source === 'excel-native';
+          let yMax;
+          let step;
+          if (isPopulation) {
+            const stackTotals = {};
+            cd.datasets.forEach(ds => {
+              ds.data.forEach((v, i) => {
+                const key = ds.stack + '_' + i;
+                stackTotals[key] = (stackTotals[key] || 0) + Math.abs(v);
+              });
+            });
+            const stackMax = Math.max(...Object.values(stackTotals), 0);
+            yMax = Math.ceil(stackMax / 500) * 500 || 1000;
+            step = yMax <= 1000 ? 200 : yMax <= 2000 ? 500 : 1000;
+          }
+
+          chartInstance = new window.Chart(canvas, {
+            type: cd.type || 'bar',
+            data: { labels: cd.labels, datasets: cd.datasets },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              indexAxis: cd.indexAxis || 'x',
+              ...(cd.cutout ? { cutout: cd.cutout } : {}),
+              interaction: {
+                mode: 'nearest',
+                intersect: true,
+                axis: 'xy',
+              },
+              onHover: (event, activeElements) => {
+                const nativeTarget = event?.native?.target || canvas;
+                if (nativeTarget && nativeTarget.style) {
+                  nativeTarget.style.cursor = activeElements && activeElements.length ? 'pointer' : 'default';
+                }
+                if (activeElements && activeElements.length) {
+                  chartHoverStates[chartKey] = normalizeActiveElements(activeElements);
+                }
+              },
+              layout: {
+                padding: { top: 8, right: 8, bottom: 0, left: 8 }
+              },
+              plugins: {
+                legend: {
+                  position: cd.legendPosition || 'top',
+                  align: 'center',
+                  labels: {
+                    font: { family: 'Plus Jakarta Sans', size: 11, weight: '400' },
+                    boxWidth: 13,
+                    boxHeight: 13,
+                    padding: 16,
+                    usePointStyle: false,
+                    color: '#1e293b',
+                  }
+                },
+                title: {
+                  display: !!cd.title,
+                  text: cd.title || '',
+                  color: '#334155',
+                  font: { family: 'Plus Jakarta Sans', size: 14, weight: '700' },
+                  padding: { bottom: 10 },
+                },
+                tooltip: {
+                  mode: 'nearest',
+                  intersect: true,
+                  backgroundColor: '#1e293b',
+                  titleFont: { family: 'Plus Jakarta Sans', size: 12, weight: '700' },
+                  bodyFont:  { family: 'Plus Jakarta Sans', size: 11 },
+                  padding: 10,
+                  displayColors: true,
+                  callbacks: {
+                    label: ctx => {
+                      if (isPieLikeChartType(ctx.chart?.config?.type || cd.type)) {
+                        return ` ${chartPointSeriesText(ctx.chart, ctx.datasetIndex, ctx.dataIndex)}`;
+                      }
+                      const value = typeof ctx.parsed?.y === 'number'
+                        ? ctx.parsed.y
+                        : (typeof ctx.parsed === 'number' ? ctx.parsed : ctx.raw);
+                      return ` ${ctx.dataset.label || 'Value'}: ${formatChartValue(value)}`;
+                    }
+                  }
+                }
+              },
+              scales: {
+                x: {
+                  display: !['pie', 'doughnut', 'radar'].includes(cd.type),
+                  stacked: isPopulation || !!cd.stacked,
+                  ticks: {
+                    font: { family: 'Plus Jakarta Sans', size: 9.5 },
+                    maxRotation: 55,
+                    minRotation: 45,
+                    color: '#374151',
+                    autoSkip: !isPopulation && !isNativeExcel,
+                  },
+                  grid: { display: false },
+                  border: { color: '#9ca3af', width: 1 },
+                },
+                y: {
+                  display: !['pie', 'doughnut', 'radar'].includes(cd.type),
+                  stacked: isPopulation || !!cd.stacked,
+                  min: isPopulation ? -yMax : undefined,
+                  max: isPopulation ? yMax : undefined,
+                  ticks: {
+                    font: { family: 'Plus Jakarta Sans', size: 10 },
+                    color: '#374151',
+                    stepSize: isPopulation ? step : undefined,
+                    callback: v => isPopulation
+                      ? (Math.abs(v) === 0 ? '0' : Math.abs(v).toLocaleString())
+                      : Number(v).toLocaleString(),
+                  },
+                  grid: {
+                    color: ctx => isPopulation && ctx.tick.value === 0 ? '#374151' : '#d1d5db',
+                    lineWidth: ctx => isPopulation && ctx.tick.value === 0 ? 1.5 : 1,
+                  },
+                  border: { color: '#9ca3af', width: 1 },
+                }
+              },
+              elements: {
+                bar: {
+                  borderRadius: 0,
+                  borderSkipped: false,
+                  categoryPercentage: isNativeExcel ? 0.72 : 0.85,
+                  barPercentage: 1.0,
+                }
+              }
+            }
+          });
+        }, 100);
+      });
+    }
+
+    watch([viewEntry, displayMode, activeWorkbookSheetId], ([entry]) => {
+      if (entry && chartData(entry.id, activeWorkbookSheetId.value)) renderChart(entry.id, activeWorkbookSheetId.value);
+      else if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
+    });
+
+    function openSheet(entry) {
+      sheets.value = loadSheets();
+      loadExtendedFontPack();
+      viewEntry.value = entry;
+      activeWorkbookSheetId.value = resolveSheetId(entry.id) || workbookSheets(entry.id)[0]?.id || 'sheet-1';
+      downloadOpen.value = false;
+    }
+    function closeSheet() {
+      viewEntry.value = null;
+      activeWorkbookSheetId.value = '';
+      downloadOpen.value = false;
+    }
+
+    function sanitizeFileName(name, ext) {
+      return `${String(name || 'export').replace(/[\\/:*?"<>|]+/g, '_').replace(/\s+/g, '_')}.${ext}`;
+    }
+
+    function sanitizeWorksheetName(name, fallback = 'Sheet') {
+      const clean = String(name || fallback)
+        .replace(/[\[\]\*\/\\:\?]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+      return (clean || fallback).slice(0, 31);
+    }
+
+    function inventoryEditHref(entry) {
+      if (!entry || !entry.id) return 'inventory.html';
+      return `inventory.html?open=${encodeURIComponent(entry.id)}`;
+    }
+
+    function downloadBlob(blob, filename) {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function hexToArgb(hex, fallback = 'FFFFFFFF') {
+      const clean = String(hex || '').trim();
+      const match = clean.match(/^#?([0-9a-f]{6})$/i);
+      return match ? `FF${match[1].toUpperCase()}` : fallback;
+    }
+
+    function hexToRgb(hex, fallback = '4472C4') {
+      const clean = String(hex || '').trim();
+      const match = clean.match(/^#?([0-9a-f]{6})$/i);
+      if (match) return match[1].toUpperCase();
+
+      const rgbMatch = clean.match(/^rgba?\(([^)]+)\)$/i);
+      if (!rgbMatch) return fallback;
+
+      const parts = rgbMatch[1].split(',').map(part => part.trim());
+      if (parts.length < 3) return fallback;
+
+      const [r, g, b] = parts.slice(0, 3).map(part =>
+        Math.max(0, Math.min(255, Math.round(parseFloat(part) || 0)))
+      );
+
+      return [r, g, b]
+        .map(part => part.toString(16).padStart(2, '0').toUpperCase())
+        .join('');
+    }
+
+    function xmlEscape(value) {
+      return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&apos;');
+    }
+
+    function quoteSheetName(name) {
+      return `'${String(name || '').replace(/'/g, "''")}'`;
+    }
+
+    function chunkString(value, size = 30000) {
+      const text = String(value || '');
+      const parts = [];
+      for (let index = 0; index < text.length; index += size) {
+        parts.push(text.slice(index, index + size));
+      }
+      return parts.length ? parts : [''];
+    }
+
+    function buildTagVaultExportPayload(entry) {
+      const selectedSheetId = resolveSheetId(entry.id, activeWorkbookSheetId.value);
+      const rawSheet = rawSheetData(entry.id, selectedSheetId);
+      return {
+        version: TAGVAULT_META_VERSION,
+        entry: {
+          title: entry.title,
+          category: entry.category,
+          tags: [...(entry.tags || [])],
+        },
+        sheet: {
+          rows: rawSheet.rows,
+          cols: rawSheet.cols,
+          data: rawSheet.data.map(row => row.map(cell => String(cell ?? ''))),
+          theme: { ...sheetTheme(entry.id, selectedSheetId) },
+          cellStyles: { ...sheetCellStyles(entry.id, selectedSheetId) },
+          styleMode: sheetStyleMode(entry.id, selectedSheetId),
+          ...(rawSheet.nativeChart ? { nativeChart: JSON.parse(JSON.stringify(rawSheet.nativeChart)) } : {}),
+        },
+        workbook: {
+          activeSheetId: selectedSheetId,
+          sheets: workbookSheets(entry.id).map(sheet => ({
+            id: sheet.id,
+            name: sheet.name,
+            rows: sheet.rows,
+            cols: sheet.cols,
+            data: sheet.data.map(row => row.map(cell => String(cell ?? ''))),
+            theme: { ...sheetTheme(entry.id, sheet.id) },
+            cellStyles: { ...sheetCellStyles(entry.id, sheet.id) },
+            styleMode: sheetStyleMode(entry.id, sheet.id),
+            ...(sheet.nativeChart ? { nativeChart: JSON.parse(JSON.stringify(sheet.nativeChart)) } : {}),
+          })),
+        },
+      };
+    }
+
+    function addTagVaultMetadataWorksheet(workbook, entry) {
+      const payload = buildTagVaultExportPayload(entry);
+      const worksheet = workbook.addWorksheet(TAGVAULT_META_SHEET, { state: 'veryHidden' });
+      const chunks = chunkString(JSON.stringify(payload));
+
+      worksheet.getCell('A1').value = TAGVAULT_META_MARKER;
+      worksheet.getCell('A2').value = TAGVAULT_META_VERSION;
+      chunks.forEach((part, index) => {
+        worksheet.getCell(index + 3, 1).value = part;
+      });
+    }
+
+    function applyExcelCellStyle(cell, style) {
+      cell.style = { ...(cell.style || {}), ...style };
+    }
+
+    function cssColorToArgb(value, fallback = null) {
+      const clean = String(value || '').trim();
+      if (!clean || clean === 'transparent') return fallback;
+      if (clean.startsWith('#')) return hexToArgb(clean, fallback);
+
+      const match = clean.match(/^rgba?\(([^)]+)\)$/i);
+      if (!match) return fallback;
+
+      const parts = match[1].split(',').map(part => part.trim());
+      if (parts.length < 3) return fallback;
+
+      const [r, g, b] = parts.slice(0, 3).map(part =>
+        Math.max(0, Math.min(255, Math.round(parseFloat(part) || 0)))
+      );
+      const alpha = parts[3] === undefined
+        ? 255
+        : Math.max(0, Math.min(255, Math.round((parseFloat(parts[3]) || 0) * 255)));
+
+      if (alpha === 0) return fallback;
+
+      return [
+        alpha.toString(16).padStart(2, '0'),
+        r.toString(16).padStart(2, '0'),
+        g.toString(16).padStart(2, '0'),
+        b.toString(16).padStart(2, '0'),
+      ].join('').toUpperCase();
+    }
+
+    function pixelsToPoints(value, fallback = null) {
+      const px = parseFloat(String(value || '').replace('px', ''));
+      if (!Number.isFinite(px) || px <= 0) return fallback;
+      return Math.round(px * 0.75 * 100) / 100;
+    }
+
+    function pixelsToExcelWidth(value, fallback = 12) {
+      const px = parseFloat(String(value || '').replace('px', ''));
+      if (!Number.isFinite(px) || px <= 0) return fallback;
+      return Math.round(Math.max(6, Math.min(80, px / 7.15)) * 100) / 100;
+    }
+
+    function cssTextAlignToExcel(value) {
+      const clean = String(value || '').toLowerCase();
+      if (clean === 'center') return 'center';
+      if (clean === 'right' || clean === 'end') return 'right';
+      if (clean === 'justify') return 'justify';
+      return 'left';
+    }
+
+    function cssVerticalAlignToExcel(value) {
+      const clean = String(value || '').toLowerCase();
+      if (clean === 'top') return 'top';
+      if (clean === 'bottom') return 'bottom';
+      return 'middle';
+    }
+
+    function cssBorderStyleToExcel(style, width) {
+      const clean = String(style || '').toLowerCase();
+      if (!clean || clean === 'none' || clean === 'hidden') return null;
+      if (clean === 'double') return 'double';
+      if (clean === 'dashed') return 'dashed';
+      if (clean === 'dotted') return 'dotted';
+      return width >= 2 ? 'medium' : 'thin';
+    }
+
+    function readExcelBorderFromDom(computed, side) {
+      const prop = side.charAt(0).toUpperCase() + side.slice(1);
+      const width = parseFloat(computed[`border${prop}Width`]) || 0;
+      const style = cssBorderStyleToExcel(computed[`border${prop}Style`], width);
+      if (!style) return null;
+      return {
+        style,
+        color: { argb: cssColorToArgb(computed[`border${prop}Color`], 'FFD0D7E2') || 'FFD0D7E2' },
+      };
+    }
+
+    function captureExcelStyleFromDom(cellEl) {
+      const computed = window.getComputedStyle(cellEl);
+      const fillArgb = cssColorToArgb(computed.backgroundColor);
+      const border = {};
+      ['top', 'right', 'bottom', 'left'].forEach(side => {
+        const sideBorder = readExcelBorderFromDom(computed, side);
+        if (sideBorder) border[side] = sideBorder;
+      });
+
+      const font = {
+        name: primaryFontName(computed.fontFamily) || 'Calibri',
+        size: pixelsToPoints(computed.fontSize, 11) || 11,
+        color: { argb: cssColorToArgb(computed.color, 'FF1E293B') || 'FF1E293B' },
+      };
+
+      if (computed.fontStyle === 'italic') font.italic = true;
+      if ((parseInt(computed.fontWeight, 10) || 0) >= 600 || computed.fontWeight === 'bold') font.bold = true;
+
+      const style = {
+        font,
+        alignment: {
+          horizontal: cssTextAlignToExcel(computed.textAlign),
+          vertical: cssVerticalAlignToExcel(computed.verticalAlign),
+          wrapText: !/nowrap/i.test(computed.whiteSpace),
+        },
+      };
+
+      if (fillArgb) {
+        style.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: fillArgb } };
+      }
+      if (Object.keys(border).length) {
+        style.border = border;
+      }
+
+      return style;
+    }
+
+    function captureRenderedTableSnapshot(entry, dataSet) {
+      if (!entry || !viewEntry.value || viewEntry.value.id !== entry.id) return null;
+
+      const tableEl = document.querySelector('.excel-overlay.open .excel-table');
+      if (!tableEl) return null;
+
+      const headerCells = Array.from(tableEl.querySelectorAll('thead th')).filter(cell => !cell.classList.contains('col-num-header'));
+      const rowEls = Array.from(tableEl.querySelectorAll('tbody tr'));
+      if (!headerCells.length || headerCells.length !== dataSet.cols || rowEls.length !== dataSet.data.length) return null;
+
+      return {
+        columnWidths: headerCells.map(cell => pixelsToExcelWidth(cell.getBoundingClientRect().width, 12)),
+        rowHeights: rowEls.map(rowEl => pixelsToPoints(rowEl.getBoundingClientRect().height, 14.25) || 14.25),
+        rows: rowEls.map(rowEl => ({
+          cells: Array.from(rowEl.querySelectorAll('td.data-cell')).map(cellEl => ({
+            value: String(cellEl.innerText || cellEl.textContent || '').replace(/\u00A0/g, ' '),
+            colSpan: Math.max(1, cellEl.colSpan || 1),
+            style: captureExcelStyleFromDom(cellEl),
+          })),
+        })),
+      };
+    }
+
+    function buildRowExcelStyle(rowClassName, theme) {
+      const baseBorder = {
+        bottom: { style: 'thin', color: { argb: 'FFE4EAF3' } },
+        right: { style: 'thin', color: { argb: 'FFE4EAF3' } },
+      };
+
+      const styles = {
+        'row-highlight': {
+          fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: hexToArgb(theme.highlight, 'FFFEF9C3') } },
+          font: { name: 'Plus Jakarta Sans', size: 11.5, bold: true, color: { argb: 'FF78350F' } },
+          alignment: { horizontal: 'center', vertical: 'middle', wrapText: false },
+          border: { bottom: { style: 'thin', color: { argb: 'FFFDE68A' } } },
+        },
+        'row-title': {
+          fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFFFF' } },
+          font: { name: 'Plus Jakarta Sans', size: 11.5, bold: true, color: { argb: 'FF1E293B' } },
+          alignment: { horizontal: 'center', vertical: 'middle', wrapText: false },
+          border: baseBorder,
+        },
+        'row-header-dark': {
+          fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: hexToArgb(theme.headerDark, 'FF1E3A5F') } },
+          font: { name: 'Plus Jakarta Sans', size: 11, bold: true, color: { argb: 'FFFFFFFF' } },
+          alignment: { horizontal: 'center', vertical: 'middle', wrapText: true },
+          border: {
+            bottom: { style: 'thin', color: { argb: 'FF16304F' } },
+            right: { style: 'thin', color: { argb: '33FFFFFF' } },
+          },
+        },
+        'row-header-light': {
+          fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: hexToArgb(theme.headerLight, 'FF2D5FA3') } },
+          font: { name: 'Plus Jakarta Sans', size: 11, bold: true, color: { argb: 'FFFFFFFF' } },
+          alignment: { horizontal: 'center', vertical: 'middle', wrapText: true },
+          border: {
+            bottom: { style: 'thin', color: { argb: 'FF254E8A' } },
+            right: { style: 'thin', color: { argb: '33FFFFFF' } },
+          },
+        },
+        'row-data': {
+          fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFFFF' } },
+          font: { name: 'Plus Jakarta Sans', size: 11.5, color: { argb: 'FF1E293B' } },
+          alignment: { vertical: 'middle', wrapText: true },
+          border: baseBorder,
+        },
+        'row-data-alt': {
+          fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: hexToArgb(theme.alt, 'FFDBEAFE') } },
+          font: { name: 'Plus Jakarta Sans', size: 11.5, color: { argb: 'FF1E293B' } },
+          alignment: { vertical: 'middle', wrapText: true },
+          border: baseBorder,
+        },
+        'row-total': {
+          fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: hexToArgb(theme.total, 'FF1E3A5F') } },
+          font: { name: 'Plus Jakarta Sans', size: 11.5, bold: true, color: { argb: 'FFFFFFFF' } },
+          alignment: { vertical: 'middle', wrapText: false },
+          border: {
+            top: { style: 'medium', color: { argb: 'FF16304F' } },
+            bottom: { style: 'thin', color: { argb: 'FF16304F' } },
+            right: { style: 'thin', color: { argb: '33FFFFFF' } },
+          },
+        },
+        'row-note': {
+          fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: hexToArgb(theme.note, 'FFF9FAFB') } },
+          font: { name: 'Plus Jakarta Sans', size: 10.5, italic: true, color: { argb: 'FF64748B' } },
+          alignment: { vertical: 'middle', wrapText: false },
+          border: { bottom: { style: 'thin', color: { argb: 'FFF0F4F8' } } },
+        },
+        'row-empty': {
+          fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFAFAFA' } },
+          border: {},
+        },
+      };
+
+      return styles[rowClassName] || styles['row-data'];
+    }
+
+    function applyRenderedTableSnapshot(worksheet, snapshot) {
+      if (!snapshot) return;
+
+      snapshot.rows.forEach((rowSnapshot, ri) => {
+        const excelRow = worksheet.getRow(ri + 1);
+        const rowHeight = snapshot.rowHeights[ri];
+        if (rowHeight) excelRow.height = rowHeight;
+
+        let ci = 1;
+        rowSnapshot.cells.forEach(cellSnapshot => {
+          const span = Math.max(1, cellSnapshot.colSpan || 1);
+          const cell = worksheet.getCell(ri + 1, ci);
+          cell.value = cellSnapshot.value;
+
+          if (span > 1) {
+            for (let fillCi = 1; fillCi < span; fillCi++) {
+              worksheet.getCell(ri + 1, ci + fillCi).value = '';
+            }
+            worksheet.mergeCells(ri + 1, ci, ri + 1, ci + span - 1);
+          }
+
+          applyExcelCellStyle(worksheet.getCell(ri + 1, ci), cellSnapshot.style);
+          ci += span;
+        });
+      });
+    }
+
+    function applyExcelTableStyles(worksheet, entry, dataSet, options = {}) {
+      const sheetId = options.sheetId || resolveSheetId(entry.id, activeWorkbookSheetId.value);
+      const theme = sheetTheme(entry.id, sheetId);
+      const customCellStyles = sheetCellStyles(entry.id, sheetId);
+      const colCount = dataSet.cols;
+      const useStandardizedLayout = options.useStandardizedLayout ?? shouldUseStandardizedLayout(entry.id, sheetId);
+
+      for (let ri = 0; ri < dataSet.data.length; ri++) {
+        const row = dataSet.data[ri];
+        const excelRow = worksheet.getRow(ri + 1);
+        const rowClassName = useStandardizedLayout ? rowClass(row, ri) : 'row-data';
+        const rowStyle = buildRowExcelStyle(rowClassName, theme);
+
+        if (useStandardizedLayout && isMergedRow(row, ri)) {
+          worksheet.mergeCells(ri + 1, 1, ri + 1, Math.max(colCount, 1));
+          const cell = worksheet.getCell(ri + 1, 1);
+          cell.value = getMergedText(row);
+          applyExcelCellStyle(cell, rowStyle);
+          if (rowClassName === 'row-note') {
+            cell.alignment = { horizontal: 'left', vertical: 'middle', wrapText: false };
+          }
+          const customStyle = customCellStyles[`${ri}-0`];
+          if (customStyle) {
+            if (customStyle.fill) cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: hexToArgb(customStyle.fill) } };
+            if (customStyle.text || customStyle.fontFamily || 'bold' in customStyle || 'italic' in customStyle) {
+              cell.font = {
+                ...(cell.font || {}),
+                ...(customStyle.text ? { color: { argb: hexToArgb(customStyle.text) } } : {}),
+                ...(customStyle.fontFamily ? { name: primaryFontName(customStyle.fontFamily) } : {}),
+                ...('bold' in customStyle ? { bold: !!customStyle.bold } : {}),
+                ...('italic' in customStyle ? { italic: !!customStyle.italic } : {}),
+              };
+            }
+            if (customStyle.align) cell.alignment = { ...(cell.alignment || {}), horizontal: customStyle.align };
+            if (customStyle.border) {
+              cell.border = {
+                top: { style: 'thin', color: { argb: hexToArgb(customStyle.border) } },
+                right: { style: 'thin', color: { argb: hexToArgb(customStyle.border) } },
+                bottom: { style: 'thin', color: { argb: hexToArgb(customStyle.border) } },
+                left: { style: 'thin', color: { argb: hexToArgb(customStyle.border) } },
+              };
+            }
+          }
+        } else {
+          for (let ci = 0; ci < colCount; ci++) {
+            const cell = worksheet.getCell(ri + 1, ci + 1);
+            cell.value = row[ci] || '';
+            applyExcelCellStyle(cell, rowStyle);
+
+            if (useStandardizedLayout) {
+              const cellClassName = cellClass(entry.id, row, ri, ci, sheetId);
+              if (cellClassName === 'cell-code') {
+                applyExcelCellStyle(cell, {
+                  fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: ri % 2 === 0 ? 'FF3B0764' : hexToArgb(theme.code, 'FF4C1D95') } },
+                  font: { name: 'JetBrains Mono', size: 10.5, bold: true, color: { argb: 'FFFFFFFF' } },
+                  alignment: { horizontal: 'center', vertical: 'middle' },
+                });
+              } else if (cellClassName === 'cell-location') {
+                applyExcelCellStyle(cell, {
+                  fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: ri % 2 === 0 ? 'FF6D28D9' : hexToArgb(theme.name, 'FF7C3AED') } },
+                  font: { name: 'Plus Jakarta Sans', size: 11.5, bold: true, color: { argb: 'FFFFFFFF' } },
+                  alignment: { horizontal: 'left', vertical: 'middle', wrapText: true },
+                });
+              } else if (cellClassName === 'cell-ratio') {
+                applyExcelCellStyle(cell, {
+                  font: { name: 'JetBrains Mono', size: 11, bold: true, color: { argb: rowClassName === 'row-total' ? 'FFFFFFFF' : 'FF1E293B' } },
+                  alignment: { horizontal: 'center', vertical: 'middle' },
+                });
+              } else if (rowClassName === 'row-data' || rowClassName === 'row-data-alt' || rowClassName === 'row-total') {
+                applyExcelCellStyle(cell, {
+                  font: { name: 'JetBrains Mono', size: 11, bold: rowClassName === 'row-total', color: { argb: rowClassName === 'row-total' ? 'FFFFFFFF' : 'FF1E293B' } },
+                  alignment: { horizontal: ci >= 2 ? 'right' : 'left', vertical: 'middle', wrapText: true },
+                });
+              }
+            }
+
+            const customStyle = customCellStyles[`${ri}-${ci}`];
+            if (customStyle) {
+              if (customStyle.fill) cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: hexToArgb(customStyle.fill) } };
+              if (customStyle.text || customStyle.fontFamily || 'bold' in customStyle || 'italic' in customStyle) {
+                cell.font = {
+                  ...(cell.font || {}),
+                  ...(customStyle.text ? { color: { argb: hexToArgb(customStyle.text) } } : {}),
+                  ...(customStyle.fontFamily ? { name: primaryFontName(customStyle.fontFamily) } : {}),
+                  ...('bold' in customStyle ? { bold: !!customStyle.bold } : {}),
+                  ...('italic' in customStyle ? { italic: !!customStyle.italic } : {}),
+                };
+              }
+              if (customStyle.align) cell.alignment = { ...(cell.alignment || {}), horizontal: customStyle.align };
+              if (customStyle.border) {
+                cell.border = {
+                  top: { style: 'thin', color: { argb: hexToArgb(customStyle.border) } },
+                  right: { style: 'thin', color: { argb: hexToArgb(customStyle.border) } },
+                  bottom: { style: 'thin', color: { argb: hexToArgb(customStyle.border) } },
+                  left: { style: 'thin', color: { argb: hexToArgb(customStyle.border) } },
+                };
+              }
+            }
+          }
+        }
+
+        if (rowClassName === 'row-empty') excelRow.height = 6;
+        if (rowClassName === 'row-highlight' || rowClassName === 'row-title') excelRow.height = 22;
+        if (rowClassName === 'row-note') excelRow.height = 20;
+      }
+    }
+
+    function estimateColumnWidths(dataSet, options = {}) {
+      const widths = Array.from({ length: dataSet.cols }, () => 12);
+      dataSet.data.forEach(row => {
+        row.forEach((cell, ci) => {
+          const text = String(cell || '').trim();
+          if (!text) return;
+          const longestLine = text.split(/\r?\n/).reduce((max, part) => Math.max(max, part.length), 0);
+          widths[ci] = Math.min(Math.max(widths[ci], longestLine + 2), 28);
+        });
+      });
+      if (widths[0] !== undefined) widths[0] = Math.min(Math.max(widths[0], 9), 12);
+      if (widths[1] !== undefined) widths[1] = Math.min(Math.max(widths[1], 18), 28);
+      if (!options.useStandardizedLayout && widths.length) {
+        const uniformWidth = Math.min(Math.max(...widths, 16), 28);
+        return widths.map(() => uniformWidth);
+      }
+      return widths;
+    }
+
+    function addChartDataWorksheet(workbook, entry, renderedChartData) {
+      if (!renderedChartData?.datasets?.length) return null;
+
+      const chartType = String(renderedChartData.type || '').toLowerCase();
+      if (!['bar', 'pie', 'doughnut'].includes(chartType)) return null;
+
+      const chartSheetName = sanitizeWorksheetName(`ChartData_${entry.id}`, 'ChartData');
+      const worksheet = workbook.addWorksheet(chartSheetName, { state: 'veryHidden' });
+      let headers = [];
+      let datasets = [];
+
+      if (isPieLikeChartType(chartType)) {
+        const firstDataset = renderedChartData.datasets[0];
+        if (!firstDataset?.data?.length || !renderedChartData.labels?.length) return null;
+
+        headers = ['Category', firstDataset.label || 'Values'];
+        worksheet.addRow(headers);
+
+        renderedChartData.labels.forEach((label, rowIndex) => {
+          worksheet.addRow([label, firstDataset.data?.[rowIndex] ?? '']);
+        });
+
+        datasets = [{
+          index: 0,
+          label: firstDataset.label || 'Values',
+          color: hexToRgb(resolveChartPointColor(firstDataset, 0, colorAt(0)), '4472C4'),
+          column: 1,
+          points: renderedChartData.labels.map((_, index) => ({
+            index,
+            color: hexToRgb(resolveChartPointColor(firstDataset, index, colorAt(index)), hexToRgb(colorAt(index), '4472C4')),
+          })),
+        }];
+      } else {
+        headers = ['Category', ...renderedChartData.datasets.map(ds => ds.label || 'Series')];
+        worksheet.addRow(headers);
+
+        renderedChartData.labels.forEach((label, rowIndex) => {
+          const row = [label];
+          renderedChartData.datasets.forEach(ds => {
+            row.push(ds.data?.[rowIndex] ?? '');
+          });
+          worksheet.addRow(row);
+        });
+
+        datasets = renderedChartData.datasets.map((ds, index) => ({
+          index,
+          label: ds.label || `Series ${index + 1}`,
+          color: hexToRgb(resolveChartPointColor(ds, index, colorAt(index)), '4472C4'),
+          column: index + 1,
+        }));
+      }
+
+      worksheet.state = 'veryHidden';
+      return {
+        sheetName: chartSheetName,
+        rows: renderedChartData.labels.length + 1,
+        cols: headers.length,
+        labelsCount: renderedChartData.labels.length,
+        type: chartType,
+        legendPosition: renderedChartData.legendPosition || 'top',
+        cutout: renderedChartData.cutout || '',
+        indexAxis: renderedChartData.indexAxis || 'x',
+        stacked: !!renderedChartData.stacked,
+        datasets,
+        variant: renderedChartData.variant || 'generic',
+      };
+    }
+
+    function buildChartXml(chartMeta) {
+      const sheetRef = quoteSheetName(chartMeta.sheetName);
+      const catRange = `${sheetRef}!$A$2:$A$${chartMeta.labelsCount + 1}`;
+      const legendPos = ({ top: 't', bottom: 'b', left: 'l', right: 'r' })[chartMeta.legendPosition] || 't';
+
+      if (isPieLikeChartType(chartMeta.type)) {
+        const firstSeries = chartMeta.datasets[0];
+        const col = colLetter(firstSeries.column);
+        const titleRef = `${sheetRef}!$${col}$1`;
+        const valRange = `${sheetRef}!$${col}$2:$${col}$${chartMeta.labelsCount + 1}`;
+        const dataPointsXml = (firstSeries.points || []).map(point => `
+        <c:dPt>
+          <c:idx val="${point.index}"/>
+          <c:spPr>
+            <a:solidFill><a:srgbClr val="${point.color}"/></a:solidFill>
+            <a:ln><a:noFill/></a:ln>
+          </c:spPr>
+        </c:dPt>`).join('');
+        const holeSize = chartMeta.type === 'doughnut'
+          ? Math.max(10, Math.min(90, Math.round(parseFloat(String(chartMeta.cutout || '50').replace('%', '')) || 50)))
+          : 0;
+
+        return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+  <c:lang val="en-US"/>
+  <c:roundedCorners val="0"/>
+  <c:chart>
+    <c:autoTitleDeleted val="1"/>
+    <c:plotArea>
+      <c:layout/>
+      <c:${chartMeta.type === 'doughnut' ? 'doughnutChart' : 'pieChart'}>
+        <c:varyColors val="1"/>
+        <c:ser>
+          <c:idx val="0"/>
+          <c:order val="0"/>
+          <c:tx><c:strRef><c:f>${xmlEscape(titleRef)}</c:f></c:strRef></c:tx>${dataPointsXml}
+          <c:cat><c:strRef><c:f>${xmlEscape(catRange)}</c:f></c:strRef></c:cat>
+          <c:val><c:numRef><c:f>${xmlEscape(valRange)}</c:f></c:numRef></c:val>
+        </c:ser>${chartMeta.type === 'doughnut' ? `
+        <c:holeSize val="${holeSize}"/>` : ''}
+        <c:firstSliceAng val="0"/>
+      </c:${chartMeta.type === 'doughnut' ? 'doughnutChart' : 'pieChart'}>
+    </c:plotArea>
+    <c:legend>
+      <c:legendPos val="${legendPos}"/>
+      <c:layout/>
+    </c:legend>
+    <c:plotVisOnly val="1"/>
+    <c:dispBlanksAs val="gap"/>
+    <c:showDLblsOverMax val="0"/>
+  </c:chart>
+</c:chartSpace>`;
+      }
+
+      const catAxId = 48650112;
+      const valAxId = 48672768;
+      const seriesXml = chartMeta.datasets.map((ds, i) => {
+        const col = colLetter(ds.column);
+        const titleRef = `${sheetRef}!$${col}$1`;
+        const valRange = `${sheetRef}!$${col}$2:$${col}$${chartMeta.labelsCount + 1}`;
+        return `
+      <c:ser>
+        <c:idx val="${i}"/>
+        <c:order val="${i}"/>
+        <c:tx><c:strRef><c:f>${xmlEscape(titleRef)}</c:f></c:strRef></c:tx>
+        <c:spPr>
+          <a:solidFill><a:srgbClr val="${ds.color}"/></a:solidFill>
+          <a:ln><a:noFill/></a:ln>
+        </c:spPr>
+        <c:invertIfNegative val="0"/>
+        <c:cat><c:strRef><c:f>${xmlEscape(catRange)}</c:f></c:strRef></c:cat>
+        <c:val><c:numRef><c:f>${xmlEscape(valRange)}</c:f></c:numRef></c:val>
+      </c:ser>`;
+      }).join('');
+      const barDir = chartMeta.indexAxis === 'y' ? 'bar' : 'col';
+      const grouping = chartMeta.variant === 'population' || chartMeta.stacked ? 'stacked' : 'clustered';
+      const overlap = grouping === 'stacked' ? 100 : 0;
+
+      const valueAxisXml = chartMeta.variant === 'population'
+        ? `
+    <c:valAx>
+      <c:axId val="${valAxId}"/>
+      <c:scaling>
+        <c:orientation val="minMax"/>
+      </c:scaling>
+      <c:delete val="0"/>
+      <c:axPos val="l"/>
+      <c:majorGridlines/>
+      <c:numFmt formatCode="#,##0;#,##0" sourceLinked="0"/>
+      <c:majorTickMark val="none"/>
+      <c:minorTickMark val="none"/>
+      <c:tickLblPos val="nextTo"/>
+      <c:crossAx val="${catAxId}"/>
+      <c:crosses val="autoZero"/>
+      <c:crossBetween val="between"/>
+    </c:valAx>`
+        : `
+    <c:valAx>
+      <c:axId val="${valAxId}"/>
+      <c:scaling><c:orientation val="minMax"/></c:scaling>
+      <c:delete val="0"/>
+      <c:axPos val="l"/>
+      <c:majorGridlines/>
+      <c:numFmt formatCode="#,##0" sourceLinked="0"/>
+      <c:majorTickMark val="none"/>
+      <c:minorTickMark val="none"/>
+      <c:tickLblPos val="nextTo"/>
+      <c:crossAx val="${catAxId}"/>
+      <c:crosses val="autoZero"/>
+      <c:crossBetween val="between"/>
+    </c:valAx>`;
+
+      return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+  <c:lang val="en-US"/>
+  <c:roundedCorners val="0"/>
+  <c:chart>
+    <c:autoTitleDeleted val="1"/>
+    <c:plotArea>
+      <c:layout/>
+      <c:barChart>
+        <c:barDir val="${barDir}"/>
+        <c:grouping val="${grouping}"/>
+        <c:varyColors val="0"/>${seriesXml}
+        <c:gapWidth val="60"/>
+        <c:overlap val="${overlap}"/>
+        <c:axId val="${catAxId}"/>
+        <c:axId val="${valAxId}"/>
+      </c:barChart>
+      <c:catAx>
+        <c:axId val="${catAxId}"/>
+        <c:scaling><c:orientation val="minMax"/></c:scaling>
+        <c:delete val="0"/>
+        <c:axPos val="b"/>
+        <c:numFmt formatCode="General" sourceLinked="1"/>
+        <c:majorTickMark val="none"/>
+        <c:minorTickMark val="none"/>
+        <c:tickLblPos val="low"/>
+        <c:crossAx val="${valAxId}"/>
+        <c:crosses val="autoZero"/>
+        <c:auto val="1"/>
+        <c:lblAlgn val="ctr"/>
+        <c:lblOffset val="100"/>
+        <c:noMultiLvlLbl val="0"/>
+      </c:catAx>${valueAxisXml}
+    </c:plotArea>
+    <c:legend>
+      <c:legendPos val="${legendPos}"/>
+      <c:layout/>
+    </c:legend>
+    <c:plotVisOnly val="1"/>
+    <c:dispBlanksAs val="gap"/>
+    <c:showDLblsOverMax val="0"/>
+  </c:chart>
+</c:chartSpace>`;
+    }
+
+    function buildDrawingXml(anchor) {
+      return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+  <xdr:twoCellAnchor>
+    <xdr:from>
+      <xdr:col>${anchor.fromCol}</xdr:col>
+      <xdr:colOff>0</xdr:colOff>
+      <xdr:row>${anchor.fromRow}</xdr:row>
+      <xdr:rowOff>0</xdr:rowOff>
+    </xdr:from>
+    <xdr:to>
+      <xdr:col>${anchor.toCol}</xdr:col>
+      <xdr:colOff>0</xdr:colOff>
+      <xdr:row>${anchor.toRow}</xdr:row>
+      <xdr:rowOff>0</xdr:rowOff>
+    </xdr:to>
+    <xdr:graphicFrame macro="">
+      <xdr:nvGraphicFramePr>
+        <xdr:cNvPr id="2" name="Chart 1"/>
+        <xdr:cNvGraphicFramePr/>
+      </xdr:nvGraphicFramePr>
+      <xdr:xfrm>
+        <a:off x="0" y="0"/>
+        <a:ext cx="0" cy="0"/>
+      </xdr:xfrm>
+      <a:graphic>
+        <a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart">
+          <c:chart xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" r:id="rId1"/>
+        </a:graphicData>
+      </a:graphic>
+    </xdr:graphicFrame>
+    <xdr:clientData/>
+  </xdr:twoCellAnchor>
+</xdr:wsDr>`;
+    }
+
+    function ensureRelationshipFile(xml) {
+      return xml || '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>';
+    }
+
+    function appendRelationship(xml, id, type, target) {
+      const rel = `<Relationship Id="${id}" Type="${type}" Target="${target}"/>`;
+      return xml.replace('</Relationships>', `${rel}</Relationships>`);
+    }
+
+    async function injectNativeChart(buffer, chartMeta, dataSet) {
+      const JSZip = window.JSZip;
+      if (!JSZip || !chartMeta) return buffer;
+
+      const zip = await JSZip.loadAsync(buffer);
+      const contentTypesPath = '[Content_Types].xml';
+      const sheetXmlPath = 'xl/worksheets/sheet1.xml';
+      const sheetRelsPath = 'xl/worksheets/_rels/sheet1.xml.rels';
+      const drawingXmlPath = 'xl/drawings/drawing1.xml';
+      const drawingRelsPath = 'xl/drawings/_rels/drawing1.xml.rels';
+      const chartXmlPath = 'xl/charts/chart1.xml';
+
+      const contentTypes = await zip.file(contentTypesPath).async('string');
+      const sheetXml = await zip.file(sheetXmlPath).async('string');
+      const sheetRelsOriginal = zip.file(sheetRelsPath) ? await zip.file(sheetRelsPath).async('string') : null;
+      const sheetRels = ensureRelationshipFile(sheetRelsOriginal);
+
+      const nextSheetRelId = `rId${(sheetRels.match(/<Relationship /g) || []).length + 1}`;
+      const updatedSheetRels = appendRelationship(
+        sheetRels,
+        nextSheetRelId,
+        'http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing',
+        '../drawings/drawing1.xml'
+      );
+
+      const sheetXmlWithNamespace = sheetXml.includes('xmlns:r=')
+        ? sheetXml
+        : sheetXml.replace('<worksheet ', '<worksheet xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" ');
+
+      const updatedSheetXml = sheetXmlWithNamespace.includes('<drawing ')
+        ? sheetXmlWithNamespace
+        : sheetXmlWithNamespace.replace('</worksheet>', `<drawing r:id="${nextSheetRelId}"/></worksheet>`);
+
+      const updatedContentTypes = contentTypes
+        .replace('</Types>', '<Override PartName="/xl/drawings/drawing1.xml" ContentType="application/vnd.openxmlformats-officedocument.drawing+xml"/><Override PartName="/xl/charts/chart1.xml" ContentType="application/vnd.openxmlformats-officedocument.drawingml.chart+xml"/></Types>');
+
+      const enrichedMeta = {
+        ...chartMeta,
+        datasets: chartMeta.datasets.map(ds => ({
+          ...ds,
+          values: [],
+        })),
+      };
+
+      const anchor = {
+        fromCol: dataSet.cols + 1,
+        fromRow: 1,
+        toCol: dataSet.cols + 10,
+        toRow: Math.max(20, Math.min(dataSet.data.length + 6, 32)),
+      };
+
+      zip.file(contentTypesPath, updatedContentTypes);
+      zip.file(sheetXmlPath, updatedSheetXml);
+      zip.file(sheetRelsPath, updatedSheetRels);
+      zip.file(drawingXmlPath, buildDrawingXml(anchor));
+      zip.file(drawingRelsPath, '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart1.xml"/></Relationships>');
+      zip.file(chartXmlPath, buildChartXml(enrichedMeta));
+
+      return zip.generateAsync({ type: 'arraybuffer' });
+    }
+
+    async function exportExcel(entry) {
+      try {
+        await ensureExcelExportDeps();
+      } catch (err) {
+        showToast('Excel export tools failed to load.', 'error');
+        return;
+      }
+
+      const ExcelJS = window.ExcelJS;
+      const selectedSheetId = resolveSheetId(entry.id, activeWorkbookSheetId.value);
+      const selectedSheetName = currentViewSheetName();
+
+      const dataSet = activeSheetData(entry.id, selectedSheetId);
+      if (!dataSet || !dataSet.data || !dataSet.data.length) {
+        showToast('No sheet data to export.', 'error');
+        return;
+      }
+
+      try {
+        const workbook = new ExcelJS.Workbook();
+        workbook.creator = 'TagVault';
+        workbook.created = new Date();
+        const useStandardizedLayout = shouldUseStandardizedLayout(entry.id, selectedSheetId);
+        const renderedChartData = chartData(entry.id, selectedSheetId);
+        const renderedSnapshot = captureRenderedTableSnapshot(entry, dataSet);
+
+        const worksheet = workbook.addWorksheet(sanitizeWorksheetName(selectedSheetName || entry.title, 'Sheet1'), {
+          views: [{ state: 'frozen', ySplit: useStandardizedLayout ? 4 : 1 }]
+        });
+
+        worksheet.properties.defaultRowHeight = renderedSnapshot ? 14.25 : 19;
+        worksheet.columns = (renderedSnapshot?.columnWidths || estimateColumnWidths(dataSet, { useStandardizedLayout })).map(width => ({ width }));
+
+        if (renderedSnapshot) {
+          worksheet.addRows(Array.from({ length: dataSet.data.length }, () => Array(dataSet.cols).fill('')));
+          applyRenderedTableSnapshot(worksheet, renderedSnapshot);
+        } else {
+          worksheet.addRows(dataSet.data.map(row => row.map(cell => String(cell || ''))));
+          applyExcelTableStyles(worksheet, entry, dataSet, { useStandardizedLayout, sheetId: selectedSheetId });
+        }
+
+        const nativeChartMeta = renderedChartData
+          ? addChartDataWorksheet(workbook, entry, renderedChartData)
+          : null;
+        addTagVaultMetadataWorksheet(workbook, entry);
+
+        let buffer = await workbook.xlsx.writeBuffer();
+        if (nativeChartMeta) {
+          buffer = await injectNativeChart(buffer, nativeChartMeta, dataSet);
+        }
+
+        downloadBlob(
+          new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }),
+          sanitizeFileName(workbookSheets(entry.id).length > 1 ? `${entry.title}_${selectedSheetName}` : entry.title, 'xlsx')
+        );
+        showToast('Excel exported!', 'success');
+      } catch (err) {
+        showToast(`Excel export failed: ${err.message}`, 'error');
+      }
+    }
+
+    function exportCSV(entry) {
+      const selectedSheetId = resolveSheetId(entry.id, activeWorkbookSheetId.value);
+      const s = rawSheetData(entry.id, selectedSheetId);
+      if (!s) return;
+      const lines = s.data.map(row =>
+        row.map(cell => '"' + String(cell || '').replace(/"/g, '""') + '"').join(',')
+      );
+      const blob = new Blob([lines.join('\n')], { type: 'text/csv' });
+      downloadBlob(blob, sanitizeFileName(workbookSheets(entry.id).length > 1 ? `${entry.title}_${currentViewSheetName()}` : entry.title, 'csv'));
+      showToast('CSV exported!', 'success');
+    }
+
+    function showToast(msg, type = 'info') {
+      const id = Date.now();
+      toasts.value.push({ id, msg, type });
+      setTimeout(() => { toasts.value = toasts.value.filter(t => t.id !== id); }, 2600);
+    }
+
+    // ── Merged-row helpers ─────────────────────────────────────
+    function isMergedRow(row, ri) {
+      const rc = rowClass(row, ri);
+      return rc === 'row-highlight' || rc === 'row-title' || rc === 'row-note';
+    }
+
+    function getMergedText(row) {
+      return row.filter(c => c && String(c).trim()).join('  ');
+    }
+
+    return {
+      entries, categories, sheets, search, catFilter, displayMode, viewEntry, activeWorkbookSheetId, downloadOpen, toasts,
+      catColor, rawSheetData, sheetData, trimmedSheetData, activeSheetData, previewSheetData, sheetTheme, tableThemeStyle, renderCellStyle, hasCustomCellStyle, shouldUseStandardizedLayout,
+      sheetDimensions, filledCells, filledCellsByMode, colLetter, displayModeLabel, setDisplayMode,
+      entriesWithSheet, filteredEntries, uniqueCategories,
+      openSheet, closeSheet, exportCSV, exportExcel, inventoryEditHref, formatDate,
+      rowClass, cellClass, tableRowClass, tableCellClass, chartData, workbookSheets, selectWorkbookSheet, currentViewSheetData, currentViewSheetName, currentViewSheetMeta, currentChartData,
+      isMergedRow, getMergedText,
+    };
+  }
+}).mount('#app');
+</script>
+</body>
+</html>
+</html>
