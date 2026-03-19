@@ -1,0 +1,1325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Inventory — Add Entry</title>
+<script src="theme.js"></script>
+<script>window.initTagVaultTheme && window.initTagVaultTheme();</script>
+<script>window.ensureTagVaultFontPack && window.ensureTagVaultFontPack('core');</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.4.21/vue.global.prod.min.js"></script>
+<link rel="stylesheet" href="style/index.css">
+</head>
+<body>
+<div id="app">
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-logo">
+        <div class="brand-icon">🏷</div>
+        <div>
+          <div class="brand-name">Inventory</div>
+          <div class="brand-sub">Tag Management</div>
+        </div>
+      </div>
+    </div>
+    <div class="nav-section">
+      <div class="nav-label">Pages</div>
+      <a href="index.html" class="nav-link active">
+        <span class="nav-icon">✚</span> Add Entry
+      </a>
+      <a href="inventory.html" class="nav-link">
+        <span class="nav-icon">📦</span> Inventory
+        <span class="nav-badge">{{ entries.length }}</span>
+      </a>
+      <a href="render.html" class="nav-link">
+        <span class="nav-icon">📊</span> Render View
+      </a>
+    </div>
+    <div class="sidebar-footer">{{ entries.length }} records saved locally</div>
+  </aside>
+
+  <!-- CONTENT -->
+  <div class="content">
+    <div class="topbar">
+      <div>
+        <div class="topbar-title">Add New Entry</div>
+        <div class="topbar-sub">Save a titled record with category and tags</div>
+      </div>
+      <div class="topbar-actions">
+        <label class="theme-toggle">
+          <span class="sr-only">Toggle color theme</span>
+          <input class="theme-toggle-input" data-theme-toggle type="checkbox" aria-label="Toggle color theme">
+          <svg width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" stroke="currentColor" fill="none" class="theme-toggle-icon theme-toggle-icon-sun"><circle r="5" cy="12" cx="12"></circle><line y2="3" y1="1" x2="12" x1="12"></line><line y2="23" y1="21" x2="12" x1="12"></line><line y2="5.64" y1="4.22" x2="5.64" x1="4.22"></line><line y2="19.78" y1="18.36" x2="19.78" x1="18.36"></line><line y2="12" y1="12" x2="3" x1="1"></line><line y2="12" y1="12" x2="23" x1="21"></line><line y2="18.36" y1="19.78" x2="5.64" x1="4.22"></line><line y2="4.22" y1="5.64" x2="19.78" x1="18.36"></line></svg>
+          <svg viewBox="0 0 24 24" class="theme-toggle-icon theme-toggle-icon-moon"><path d="m12.3 4.9c.4-.2.6-.7.5-1.1s-.6-.8-1.1-.8c-4.9.1-8.7 4.1-8.7 9 0 5 4 9 9 9 3.8 0 7.1-2.4 8.4-5.9.2-.4 0-.9-.4-1.2s-.9-.2-1.2.1c-1 .9-2.3 1.4-3.7 1.4-3.1 0-5.7-2.5-5.7-5.7 0-1.9 1.1-3.8 2.9-4.8zm2.8 12.5c.5 0 1 0 1.4-.1-1.2 1.1-2.8 1.7-4.5 1.7-3.9 0-7-3.1-7-7 0-2.5 1.4-4.8 3.5-6-.7 1.1-1 2.4-1 3.8-.1 4.2 3.4 7.6 7.6 7.6z"></path></svg>
+        </label>
+      </div>
+    </div>
+
+    <div class="page">
+
+      <!-- Progress steps -->
+      <div class="progress-steps">
+        <div class="step" :class="stepClass(1)">
+          <div class="step-num">{{ form.title ? '✓' : '1' }}</div> Title
+        </div>
+        <div class="step-line"></div>
+        <div class="step" :class="stepClass(2)">
+          <div class="step-num">{{ form.category ? '✓' : '2' }}</div> Category
+        </div>
+        <div class="step-line"></div>
+        <div class="step" :class="stepClass(3)">
+          <div class="step-num">{{ form.tags.length ? '✓' : '3' }}</div> Tags
+        </div>
+      </div>
+
+      <!-- ── Two-column cards row ── -->
+      <div class="cards-row">
+
+      <!-- ── Manual Entry Card ── -->
+      <div class="card add-card">
+
+        <!-- Title -->
+        <div class="form-group">
+          <label class="form-label">Title <span>* required</span></label>
+          <input
+            class="input"
+            ref="titleInput"
+            v-model="form.title"
+            placeholder="Type a title..."
+            maxlength="120"
+          />
+          <div style="text-align:right;font-size:11px;color:var(--text3);margin-top:4px">{{ form.title.length }}/120</div>
+        </div>
+
+        <hr class="section-divider">
+
+        <!-- Category -->
+        <div class="form-group">
+          <label class="form-label">Category <span>* required</span></label>
+          <div class="select-wrap">
+            <input
+              ref="categoryInput"
+              class="select-native-validation"
+              :value="form.category"
+              required
+              tabindex="-1"
+              aria-hidden="true"
+            />
+            <div class="select-btn" :class="{open: catOpen}" @click="catOpen=!catOpen">
+              <span v-if="form.category" style="display:flex;align-items:center;gap:8px">
+                <span class="cat-dot" :style="{background: catColor(form.category)}"></span>
+                {{ form.category }}
+              </span>
+              <span v-else class="select-placeholder">Select a category...</span>
+              <span class="select-arrow">▼</span>
+            </div>
+            <div class="dropdown" v-if="catOpen">
+              <div class="dropdown-item" v-for="c in categories" :key="c.name"
+                :class="{active: form.category===c.name}"
+                @click="form.category=c.name; catOpen=false; categoryInput && categoryInput.setCustomValidity('')">
+                <span class="cat-dot" :style="{background: c.color}"></span>
+                {{ c.name }}
+                <span v-if="form.category===c.name" style="margin-left:auto;font-size:11px;color:var(--text3)">✓</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <hr class="section-divider">
+
+        <!-- Tags -->
+        <div class="form-group" style="margin-bottom:0">
+          <label class="form-label">Tags <span>(press Enter or comma to add · backspace to remove)</span></label>
+          <div class="tag-input-wrap" @click="$refs.tagIn.focus()">
+            <input
+              ref="tagsInput"
+              class="tag-native-validation"
+              :value="form.tags.join(',')"
+              required
+              tabindex="-1"
+              aria-hidden="true"
+            />
+            <span class="pill" v-for="(t,i) in form.tags" :key="i" :class="getPillClass(t)">
+              {{ t }}
+              <span class="pill-x" @click.stop="removeTag(i)">×</span>
+            </span>
+            <input
+              ref="tagIn"
+              class="tag-raw-input"
+              v-model="tagInput"
+              :placeholder="form.category ? 'Type and press Enter...' : 'Select a category first...'"
+              @keydown="onTagKeydown"
+            />
+          </div>
+          <div v-if="form.tags.length" style="font-size:11px;color:var(--text3);margin-top:5px">
+            {{ form.tags.length }} tag{{ form.tags.length !== 1 ? 's' : '' }} added
+          </div>
+
+          <!-- Tag suggestions based on category -->
+          <div class="tag-suggestions" v-if="form.category && !form.tags.length">
+            <div class="tag-suggestions-label">
+              💡 Suggested for <strong>{{ form.category }}</strong> — click to add:
+            </div>
+            <div class="tag-suggestions-pills">
+              <span
+                class="tag-suggestion-pill"
+                v-for="s in tagSuggestions"
+                :key="s"
+                @click="addSuggestedTag(s)"
+              >+ {{ s }}</span>
+            </div>
+          </div>
+        </div>
+
+        <hr class="section-divider" style="margin-top:auto">
+
+        <!-- Actions -->
+        <div class="flex gap-12 items-center">
+          <button class="btn btn-primary" @click="addEntry">
+            <span>✚</span> Add
+          </button>
+          <button class="btn btn-ghost" @click="resetForm">Clear</button>
+          <div v-if="lastSaved" style="margin-left:auto;font-size:12px;color:var(--text3)">
+            Last saved {{ lastSaved }}
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ── Import File Card ── -->
+      <div class="import-card">
+        <div class="import-card-header">
+          <div>
+            <div class="import-card-title">
+              <span class="import-icon">📥</span>
+              Import Observations
+            </div>
+            <div class="import-card-sub">
+              Upload a CSV file — it will be parsed and automatically appear in the
+              <a href="render.html">Render View</a>.
+              Please make sure your CSV is UTF-8 encoded for best results.
+            </div>
+          </div>
+        </div>
+
+        <!-- Drop zone — grows to fill remaining space -->
+        <div
+          class="import-dropzone"
+          :class="{ dragover: importDragover }"
+          @dragover.prevent="importDragover = true"
+          @dragleave.prevent="importDragover = false"
+          @drop.prevent="onImportDrop"
+        >
+          <input type="file" accept=".csv,.xlsx" ref="fileInput" @change="onImportFileChange" />
+          <div class="import-drop-icon">📂</div>
+          <div class="import-drop-text">Drag and drop your CSV or XLSX file here or <span>Select a file</span></div>
+          <div class="import-drop-hint">Supported: .csv, .xlsx · Recommended under 2 MB · TagVault exports can round-trip back in</div>
+        </div>
+
+        <!-- Selected file preview -->
+        <div class="import-file-selected" v-if="importFileInfo">
+          <span class="file-icon">📄</span>
+          <span class="import-file-name">{{ importFileInfo.name }}</span>
+          <span class="import-file-size">{{ formatFileSize(importFileInfo.size) }}</span>
+          <button class="import-remove" @click="clearImportFile" title="Remove">×</button>
+        </div>
+        <div v-if="importFileInfo" style="font-size:11px;color:var(--text3);margin-top:8px">
+          Recommended: under {{ formatFileSize(RECOMMENDED_MAX_BYTES) }}.
+          Larger files may be trimmed to {{ MAX_ROWS }} rows × {{ MAX_COLS }} cols or fail if browser storage is full.
+        </div>
+        <div v-if="importFileInfo && importFileInfo.kind === 'xlsx'" style="font-size:11px;color:var(--text3);margin-top:6px">
+          XLSX selection is kept only until this page is refreshed. Once imported, the sheet is saved in the app.
+        </div>
+
+        <!-- Progress bar -->
+        <div class="import-progress" v-if="importProgress > 0 && importProgress < 100">
+          <div class="import-progress-bar" :style="{ width: importProgress + '%' }"></div>
+        </div>
+        <div class="import-status" v-if="importProgress > 0 && importProgress < 100">
+          Processing… {{ importProgress }}%
+        </div>
+
+        <!-- Actions -->
+        <div class="import-actions">
+          <button class="btn-import" :disabled="!importFile" @click="runImport">
+            ↑ Import
+          </button>
+          <button class="btn btn-ghost" @click="clearImportFile">Cancel</button>
+          <a v-if="lastImportId" href="render.html" class="btn-import-link">
+            View in Render View →
+          </a>
+        </div>
+      </div>
+
+      </div><!-- /cards-row -->
+
+      <!-- ── Recently Added ── -->
+      <div class="recent-list" v-if="recentEntries.length">
+        <div class="recent-title">Recently Added</div>
+        <div class="recent-item" v-for="e in recentEntries" :key="e.id">
+          <div class="recent-icon" :style="{background: catColor(e.category)+'20'}">
+            {{ catIcon(e.category) }}
+          </div>
+          <div class="recent-meta">
+            <div class="recent-name">{{ e.title }}</div>
+            <div class="recent-cat">{{ e.category }} · {{ formatDate(e.createdAt) }}</div>
+          </div>
+          <div class="recent-tags">
+            <span class="pill" v-for="t in e.tags.slice(0,3)" :key="t" :class="getPillClass(t)" style="font-size:11px;padding:2px 8px">{{ t }}</span>
+            <span v-if="e.tags.length > 3" class="pill pill-other" style="font-size:11px;padding:2px 8px">+{{ e.tags.length - 3 }}</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<!-- TOAST -->
+<div class="toast-container">
+  <div class="toast" v-for="t in toasts" :key="t.id" :class="t.type">{{ t.msg }}</div>
+</div>
+</div>
+
+<script src="data.js"></script>
+<script>
+const { createApp, ref, computed, watch } = Vue;
+
+const SHEET_STORE = 'tagvault_sheets';
+const EXCEL_JS_SRC = 'https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js';
+const JSZIP_SRC = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+const TAGVAULT_META_SHEET = '__TagVaultMeta';
+const TAGVAULT_META_MARKER = 'TAGVAULT_META';
+const TAGVAULT_META_VERSION = 1;
+const RECOMMENDED_MAX_BYTES = 2 * 1024 * 1024;
+const HARD_MAX_BYTES = 4 * 1024 * 1024;
+const MAX_ROWS = 500;
+const MAX_COLS = 30;
+const scriptLoaders = {};
+
+function loadSheets() { try { return JSON.parse(localStorage.getItem(SHEET_STORE)) || {}; } catch { return {}; } }
+function saveSheets(d) { localStorage.setItem(SHEET_STORE, JSON.stringify(d)); }
+
+function ensureScript(src, isReady) {
+  if (isReady()) return Promise.resolve();
+  if (scriptLoaders[src]) return scriptLoaders[src];
+
+  scriptLoaders[src] = new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = src;
+    script.async = true;
+    script.onload = () => resolve();
+    script.onerror = () => {
+      delete scriptLoaders[src];
+      reject(new Error(`Failed to load ${src}`));
+    };
+    document.head.appendChild(script);
+  });
+
+  return scriptLoaders[src];
+}
+
+function ensureExcelImportLib() {
+  return Promise.all([
+    ensureScript(EXCEL_JS_SRC, () => !!window.ExcelJS),
+    ensureScript(JSZIP_SRC, () => !!window.JSZip),
+  ]);
+}
+
+const FORM_DRAFT_KEY  = 'tagvault_form_draft';
+const IMPORT_INFO_KEY = 'tagvault_import_info';
+
+function loadFormDraft() {
+  try { return JSON.parse(localStorage.getItem(FORM_DRAFT_KEY)) || { title: '', category: '', tags: [] }; }
+  catch { return { title: '', category: '', tags: [] }; }
+}
+function saveFormDraft(f) {
+  localStorage.setItem(FORM_DRAFT_KEY, JSON.stringify({ title: f.title, category: f.category, tags: [...f.tags] }));
+}
+function clearFormDraft() { localStorage.removeItem(FORM_DRAFT_KEY); }
+
+function loadImportInfo() {
+  try { return JSON.parse(localStorage.getItem(IMPORT_INFO_KEY)) || null; }
+  catch { return null; }
+}
+function saveImportInfo(info) {
+  // CSV text is stored so we can reconstruct selection after refresh.
+  try { localStorage.setItem(IMPORT_INFO_KEY, JSON.stringify(info)); }
+  catch { /* quota — skip silently */ }
+}
+function clearImportInfo() { localStorage.removeItem(IMPORT_INFO_KEY); }
+
+// Reconstruct a real File object from persisted CSV text content
+function reconstructFile(info) {
+  if (!info || !info.text || info.kind !== 'csv') return null;
+  try {
+    const blob = new Blob([info.text], { type: 'text/csv' });
+    return new File([blob], info.name, { type: 'text/csv' });
+  } catch { return null; }
+}
+
+function getImportExtension(name) {
+  const match = String(name || '').toLowerCase().match(/\.([^.]+)$/);
+  return match ? match[1] : '';
+}
+
+function getImportKind(fileOrName) {
+  const ext = getImportExtension(typeof fileOrName === 'string' ? fileOrName : fileOrName?.name);
+  return ext === 'xlsx' ? 'xlsx' : (ext === 'csv' ? 'csv' : '');
+}
+
+function formatImportedCellValue(cell) {
+  const value = cell?.value;
+  if (value === null || value === undefined) return '';
+  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return String(value);
+  if (value instanceof Date) return value.toISOString();
+  if (Array.isArray(value?.richText)) return value.richText.map(part => part.text || '').join('');
+  if (value?.text) return String(value.text);
+  if (value?.result !== undefined && value?.result !== null) return String(value.result);
+  if (value?.formula) return String(value.formula);
+  if (value?.hyperlink) return String(value.hyperlink);
+  return String(cell?.text || value || '');
+}
+
+function countImportedFilledCells(sheet) {
+  return (Array.isArray(sheet?.data) ? sheet.data : []).reduce((total, row) =>
+    total + (Array.isArray(row) ? row.filter(cell => String(cell ?? '').trim()).length : 0)
+  , 0);
+}
+
+function isCbmsLikeImportedSheet(sheet) {
+  const sample = (Array.isArray(sheet?.data) ? sheet.data : [])
+    .slice(0, 8)
+    .map(row => (Array.isArray(row) ? row : []).map(cell => String(cell ?? '').trim().toUpperCase()).join(' '))
+    .join(' ');
+  const signals = ['LOCATION', 'PSA', 'BRGY', 'CBMS', 'POPCEN', 'MALE HEADED', 'FEMALE HEADED'];
+  return signals.filter(signal => sample.includes(signal)).length >= 2;
+}
+
+function detectImportedStyleMode(sheet) {
+  return isCbmsLikeImportedSheet(sheet) ? 'styled' : 'plain';
+}
+
+function normalizeImportedSheet(sheet) {
+  const rawData = Array.isArray(sheet?.data) ? sheet.data : [];
+  const rawRows = Math.max(0, parseInt(sheet?.rows, 10) || rawData.length || 0);
+  const derivedCols = rawData.reduce((max, row) => Math.max(max, Array.isArray(row) ? row.length : 0), 0);
+  const rawCols = Math.max(0, parseInt(sheet?.cols, 10) || derivedCols || 0);
+  const rows = Math.min(rawRows || rawData.length, MAX_ROWS);
+  const cols = Math.min(rawCols || derivedCols, MAX_COLS);
+  const data = rawData.slice(0, rows).map(row => {
+    const source = Array.isArray(row) ? row : [];
+    const next = source.slice(0, cols).map(cell => String(cell ?? ''));
+    while (next.length < cols) next.push('');
+    return next;
+  });
+
+  if (!data.length && rows > 0) {
+    for (let ri = 0; ri < rows; ri++) data.push(Array(cols).fill(''));
+  }
+
+  return {
+    rows,
+    cols,
+    data,
+    theme: sheet?.theme ? { ...sheet.theme } : undefined,
+    cellStyles: sheet?.cellStyles ? { ...sheet.cellStyles } : undefined,
+    styleMode: sheet?.styleMode || detectImportedStyleMode({ data }),
+    ...(sheet?.nativeChart ? { nativeChart: JSON.parse(JSON.stringify(sheet.nativeChart)) } : {}),
+    trimmed: rawRows > MAX_ROWS || rawCols > MAX_COLS,
+    rawRows,
+    rawCols,
+  };
+}
+
+function scoreImportedSheet(sheet) {
+  const rows = Array.isArray(sheet?.data) ? sheet.data : [];
+  const filledCells = countImportedFilledCells(sheet);
+  const firstRows = rows.slice(0, 16);
+  const numericRows = firstRows.filter(row =>
+    (Array.isArray(row) ? row : []).filter(cell => {
+      const value = String(cell ?? '').trim().replace(/,/g, '');
+      return value && !isNaN(Number(value));
+    }).length >= 2
+  ).length;
+  const headerHints = firstRows.some(row =>
+    (Array.isArray(row) ? row : []).some(cell =>
+      /total|amount|value|month|date|category|series|male|female/i.test(String(cell ?? ''))
+    )
+  ) ? 20 : 0;
+  const chartPenalty = /dashboard|cover|summary/i.test(String(sheet?.name || '')) ? -10 : 0;
+  return filledCells + (numericRows * 8) + headerHints + chartPenalty;
+}
+
+function choosePrimaryImportedSheetId(sheets) {
+  if (!Array.isArray(sheets) || !sheets.length) return 'sheet-1';
+  return [...sheets]
+    .sort((a, b) => scoreImportedSheet(b) - scoreImportedSheet(a))[0]
+    .id;
+}
+
+function normalizeImportedWorkbook(workbook, fallbackName = 'Sheet 1') {
+  const rawSheets = Array.isArray(workbook?.sheets) ? workbook.sheets : [];
+  const sheets = rawSheets.map((sheet, index) => {
+    const normalized = normalizeImportedSheet(sheet);
+    return {
+      id: String(sheet?.id || `sheet-${index + 1}`),
+      name: String(sheet?.name || sheet?.title || `Sheet ${index + 1}`),
+      ...normalized,
+    };
+  });
+
+  if (!sheets.length) {
+    const normalized = normalizeImportedSheet(workbook?.sheet || {});
+    sheets.push({
+      id: 'sheet-1',
+      name: String(workbook?.activeSheetName || fallbackName),
+      ...normalized,
+    });
+  }
+
+  let activeSheetId = String(workbook?.activeSheetId || '');
+  if (!sheets.some(sheet => sheet.id === activeSheetId)) {
+    const named = sheets.find(sheet => sheet.name === workbook?.activeSheetName);
+    activeSheetId = named?.id || choosePrimaryImportedSheetId(sheets);
+  }
+
+  return { activeSheetId, sheets };
+}
+
+function buildSingleSheetWorkbook(name, sheet) {
+  const normalized = normalizeImportedSheet(sheet);
+  return {
+    activeSheetId: 'sheet-1',
+    sheets: [{
+      id: 'sheet-1',
+      name: String(name || 'Sheet 1'),
+      ...normalized,
+    }],
+  };
+}
+
+function cloneWorkbookForStorage(workbook) {
+  if (!workbook || !Array.isArray(workbook.sheets)) return undefined;
+  return {
+    activeSheetId: workbook.activeSheetId,
+    sheets: workbook.sheets.map(sheet => ({
+      id: sheet.id,
+      name: sheet.name,
+      rows: sheet.rows,
+      cols: sheet.cols,
+      data: sheet.data.map(row => [...row]),
+      ...(sheet.theme ? { theme: { ...sheet.theme } } : {}),
+      ...(sheet.cellStyles ? { cellStyles: { ...sheet.cellStyles } } : {}),
+      ...(sheet.styleMode ? { styleMode: sheet.styleMode } : {}),
+      ...(sheet.nativeChart ? { nativeChart: JSON.parse(JSON.stringify(sheet.nativeChart)) } : {}),
+      ...(sheet.trimmed ? { trimmed: true } : {}),
+      ...(sheet.rawRows ? { rawRows: sheet.rawRows } : {}),
+      ...(sheet.rawCols ? { rawCols: sheet.rawCols } : {}),
+    })),
+  };
+}
+
+function parseXmlString(xml) {
+  return new DOMParser().parseFromString(String(xml || ''), 'application/xml');
+}
+
+function xmlElements(node, localName) {
+  return Array.from(node?.getElementsByTagName('*') || []).filter(el => el.localName === localName);
+}
+
+function xmlChildren(node, localName) {
+  return Array.from(node?.childNodes || []).filter(child =>
+    child.nodeType === 1 && (!localName || child.localName === localName)
+  );
+}
+
+function xmlFirst(node, localName) {
+  return xmlElements(node, localName)[0] || null;
+}
+
+function xmlAttr(node, name) {
+  if (!node?.attributes) return '';
+  const exact = node.getAttribute(name);
+  if (exact !== null && exact !== undefined) return exact;
+  const matched = Array.from(node.attributes).find(attr =>
+    attr.name === name || attr.localName === name || attr.name.endsWith(`:${name}`)
+  );
+  return matched ? matched.value : '';
+}
+
+function zipDirname(path) {
+  const normalized = String(path || '').replace(/\\/g, '/');
+  const index = normalized.lastIndexOf('/');
+  return index >= 0 ? normalized.slice(0, index + 1) : '';
+}
+
+function zipResolvePath(basePath, targetPath) {
+  const target = String(targetPath || '').replace(/\\/g, '/');
+  if (!target) return '';
+  return new URL(target.replace(/^\/+/, ''), `https://zip.local/${zipDirname(basePath)}`).pathname.replace(/^\/+/, '');
+}
+
+function sheetRelPath(sheetPath) {
+  const normalized = String(sheetPath || '').replace(/\\/g, '/');
+  const dir = zipDirname(normalized);
+  const name = normalized.slice(dir.length);
+  return `${dir}_rels/${name}.rels`;
+}
+
+async function zipFileText(zip, path) {
+  const file = zip.file(path);
+  return file ? file.async('string') : null;
+}
+
+async function readRelationships(zip, ownerPath) {
+  const relXml = await zipFileText(zip, sheetRelPath(ownerPath));
+  if (!relXml) return {};
+  const relDoc = parseXmlString(relXml);
+  const rels = {};
+  xmlElements(relDoc, 'Relationship').forEach(rel => {
+    const id = xmlAttr(rel, 'Id');
+    const target = xmlAttr(rel, 'Target');
+    if (id && target) rels[id] = zipResolvePath(ownerPath, target);
+  });
+  return rels;
+}
+
+function chartThemeColor(token) {
+  return {
+    accent1: '#4472C4',
+    accent2: '#ED7D31',
+    accent3: '#A5A5A5',
+    accent4: '#FFC000',
+    accent5: '#5B9BD5',
+    accent6: '#70AD47',
+    tx1: '#000000',
+    tx2: '#FFFFFF',
+    bg1: '#FFFFFF',
+    bg2: '#000000',
+  }[String(token || '').trim()] || '';
+}
+
+function chartColorFromNode(node, fallback = '') {
+  const solidFill = xmlFirst(node, 'solidFill');
+  if (!solidFill) return fallback;
+  const srgb = xmlFirst(solidFill, 'srgbClr');
+  if (srgb) {
+    const value = xmlAttr(srgb, 'val');
+    if (value) return `#${value}`;
+  }
+  const scheme = xmlFirst(solidFill, 'schemeClr');
+  const mapped = chartThemeColor(xmlAttr(scheme, 'val'));
+  return mapped || fallback;
+}
+
+function chartTextFromNode(node) {
+  const richText = xmlElements(node, 't').map(el => String(el.textContent || '').trim()).filter(Boolean).join(' ');
+  if (richText) return richText;
+  const valueNode = xmlFirst(node, 'v');
+  return valueNode ? String(valueNode.textContent || '').trim() : '';
+}
+
+function chartCachedValues(node) {
+  const cache = xmlFirst(node, 'strCache') || xmlFirst(node, 'numCache') || xmlFirst(node, 'multiLvlStrCache') || xmlFirst(node, 'numLit') || xmlFirst(node, 'strLit');
+  if (!cache) return [];
+  return xmlElements(cache, 'pt')
+    .map(pt => ({
+      index: parseInt(xmlAttr(pt, 'idx'), 10) || 0,
+      value: chartTextFromNode(pt),
+    }))
+    .sort((a, b) => a.index - b.index)
+    .map(pt => pt.value);
+}
+
+function chartSeriesText(ser) {
+  const tx = xmlFirst(ser, 'tx');
+  if (!tx) return '';
+  const cached = chartCachedValues(tx);
+  return cached[0] || chartTextFromNode(tx);
+}
+
+function chartCategories(ser) {
+  const source = xmlFirst(ser, 'cat') || xmlFirst(ser, 'xVal');
+  if (!source) return [];
+  const cached = chartCachedValues(source);
+  return cached.map(value => String(value || '').trim());
+}
+
+function chartValues(ser) {
+  const source = xmlFirst(ser, 'val') || xmlFirst(ser, 'yVal');
+  if (!source) return [];
+  return chartCachedValues(source).map(value => {
+    const parsed = parseFloat(String(value || '').replace(/,/g, ''));
+    return Number.isFinite(parsed) ? parsed : null;
+  });
+}
+
+function parseExcelChart(chartXml) {
+  const chartDoc = parseXmlString(chartXml);
+  const plotArea = xmlFirst(chartDoc, 'plotArea');
+  if (!plotArea) return null;
+
+  const chartNode = ['barChart', 'lineChart', 'pieChart', 'doughnutChart', 'scatterChart', 'radarChart', 'areaChart']
+    .map(tag => xmlFirst(plotArea, tag))
+    .find(Boolean);
+  if (!chartNode) return null;
+
+  const localType = chartNode.localName;
+  const datasets = xmlChildren(chartNode, 'ser').map((ser, index) => {
+    const label = chartSeriesText(ser) || `Series ${index + 1}`;
+    const categories = chartCategories(ser);
+    const values = chartValues(ser);
+    const baseColor = chartColorFromNode(xmlFirst(ser, 'spPr'), ['#4472C4', '#ED7D31', '#70AD47', '#FFC000', '#5B9BD5', '#A5A5A5'][index % 6]);
+    return {
+      label,
+      categories,
+      values,
+      color: baseColor,
+      smooth: xmlAttr(xmlFirst(ser, 'smooth'), 'val') === '1',
+      marker: xmlAttr(xmlFirst(xmlFirst(ser, 'marker'), 'symbol'), 'val') || '',
+    };
+  }).filter(series => series.values.some(value => value !== null));
+
+  if (!datasets.length) return null;
+
+  const labels = datasets.find(series => series.categories.length)?.categories || [];
+  const title = chartTextFromNode(xmlFirst(chartDoc, 'title'));
+  const legendPos = xmlAttr(xmlFirst(chartDoc, 'legendPos'), 'val') || 't';
+  const chart = {
+    source: 'excel-native',
+    title,
+    legendPosition: ({ t: 'top', b: 'bottom', l: 'left', r: 'right' })[legendPos] || 'top',
+    type: 'bar',
+    datasets: [],
+  };
+
+  if (localType === 'lineChart' || localType === 'areaChart') {
+    chart.type = 'line';
+    chart.labels = labels;
+    chart.datasets = datasets.map(series => ({
+      label: series.label,
+      data: series.values,
+      borderColor: series.color,
+      backgroundColor: localType === 'areaChart' ? `${series.color}66` : series.color,
+      pointBackgroundColor: series.color,
+      pointRadius: series.marker === 'none' ? 0 : 3,
+      pointHoverRadius: series.marker === 'none' ? 0 : 4,
+      tension: series.smooth ? 0.38 : 0,
+      fill: localType === 'areaChart',
+      spanGaps: true,
+    }));
+    return chart;
+  }
+
+  if (localType === 'pieChart' || localType === 'doughnutChart') {
+    const firstSeries = datasets[0];
+    chart.type = localType === 'doughnutChart' ? 'doughnut' : 'pie';
+    chart.labels = firstSeries.categories.length ? firstSeries.categories : labels;
+    chart.datasets = [{
+      label: firstSeries.label,
+      data: firstSeries.values,
+      backgroundColor: firstSeries.values.map((_, index) => datasets[index]?.color || ['#4472C4', '#ED7D31', '#70AD47', '#FFC000', '#5B9BD5', '#A5A5A5'][index % 6]),
+      borderColor: '#ffffff',
+      borderWidth: 1,
+    }];
+    chart.cutout = localType === 'doughnutChart' ? '50%' : '0%';
+    return chart;
+  }
+
+  if (localType === 'scatterChart') {
+    chart.type = 'scatter';
+    chart.datasets = datasets.map(series => ({
+      label: series.label,
+      data: series.values.map((value, index) => ({ x: parseFloat(series.categories[index]) || index + 1, y: value })),
+      borderColor: series.color,
+      backgroundColor: series.color,
+      pointRadius: 4,
+      showLine: false,
+    }));
+    return chart;
+  }
+
+  if (localType === 'radarChart') {
+    chart.type = 'radar';
+    chart.labels = labels;
+    chart.datasets = datasets.map(series => ({
+      label: series.label,
+      data: series.values,
+      borderColor: series.color,
+      backgroundColor: `${series.color}33`,
+      pointBackgroundColor: series.color,
+      pointRadius: 3,
+      fill: true,
+    }));
+    return chart;
+  }
+
+  const barDir = xmlAttr(xmlFirst(chartNode, 'barDir'), 'val') || 'col';
+  const grouping = xmlAttr(xmlFirst(chartNode, 'grouping'), 'val') || 'clustered';
+  chart.type = 'bar';
+  chart.labels = labels;
+  chart.indexAxis = barDir === 'bar' ? 'y' : 'x';
+  chart.stacked = grouping === 'stacked' || grouping === 'percentStacked';
+  chart.datasets = datasets.map(series => ({
+    label: series.label,
+    data: series.values,
+    backgroundColor: `${series.color}CC`,
+    borderColor: series.color,
+    borderWidth: 1,
+    borderRadius: grouping === 'stacked' ? 0 : 4,
+  }));
+  return chart;
+}
+
+async function extractNativeChartsFromXlsx(buffer) {
+  const JSZip = window.JSZip;
+  if (!JSZip) return {};
+  const zip = await JSZip.loadAsync(buffer);
+  const workbookXml = await zipFileText(zip, 'xl/workbook.xml');
+  const workbookRelsXml = await zipFileText(zip, 'xl/_rels/workbook.xml.rels');
+  if (!workbookXml || !workbookRelsXml) return {};
+
+  const workbookDoc = parseXmlString(workbookXml);
+  const workbookRels = parseXmlString(workbookRelsXml);
+  const relTargets = {};
+  xmlElements(workbookRels, 'Relationship').forEach(rel => {
+    const id = xmlAttr(rel, 'Id');
+    const target = xmlAttr(rel, 'Target');
+    if (id && target) relTargets[id] = zipResolvePath('xl/workbook.xml', target);
+  });
+
+  const result = {};
+  const sheetEntries = xmlElements(workbookDoc, 'sheet').map((sheetEl, index) => ({
+    id: `sheet-${index + 1}`,
+    name: xmlAttr(sheetEl, 'name') || `Sheet ${index + 1}`,
+    path: relTargets[xmlAttr(sheetEl, 'id')],
+  })).filter(sheet => sheet.path);
+
+  for (const sheet of sheetEntries) {
+    const sheetXml = await zipFileText(zip, sheet.path);
+    if (!sheetXml) continue;
+    const sheetDoc = parseXmlString(sheetXml);
+    const drawingId = xmlAttr(xmlFirst(sheetDoc, 'drawing'), 'id');
+    if (!drawingId) continue;
+    const sheetRels = await readRelationships(zip, sheet.path);
+    const drawingPath = sheetRels[drawingId];
+    if (!drawingPath) continue;
+    const drawingXml = await zipFileText(zip, drawingPath);
+    if (!drawingXml) continue;
+    const drawingDoc = parseXmlString(drawingXml);
+    const drawingRels = await readRelationships(zip, drawingPath);
+    const chartRef = xmlElements(drawingDoc, 'chart')[0];
+    const chartPath = drawingRels[xmlAttr(chartRef, 'id')];
+    if (!chartPath) continue;
+    const chartXml = await zipFileText(zip, chartPath);
+    if (!chartXml) continue;
+    const parsedChart = parseExcelChart(chartXml);
+    if (parsedChart) result[sheet.name] = parsedChart;
+  }
+
+  return result;
+}
+
+function parseWorkbookMetadata(workbook) {
+  const metaSheet = workbook.getWorksheet(TAGVAULT_META_SHEET);
+  if (!metaSheet) return null;
+
+  const marker = String(metaSheet.getCell('A1').text || metaSheet.getCell('A1').value || '').trim();
+  if (marker !== TAGVAULT_META_MARKER) return null;
+
+  const version = parseInt(metaSheet.getCell('A2').text || metaSheet.getCell('A2').value, 10);
+  if (version !== TAGVAULT_META_VERSION) return null;
+
+  const parts = [];
+  for (let ri = 3; ri <= metaSheet.rowCount; ri++) {
+    const value = metaSheet.getCell(ri, 1).value;
+    if (value === null || value === undefined || value === '') continue;
+    parts.push(String(value));
+  }
+  if (!parts.length) return null;
+
+  try {
+    const payload = JSON.parse(parts.join(''));
+    if (!payload?.sheet || !Array.isArray(payload.sheet.data)) return null;
+    return payload;
+  } catch {
+    return null;
+  }
+}
+
+async function parseXlsxFile(file) {
+  await ensureExcelImportLib();
+  const workbook = new window.ExcelJS.Workbook();
+  const buffer = await file.arrayBuffer();
+  let nativeChartsBySheetName = {};
+  try {
+    nativeChartsBySheetName = await extractNativeChartsFromXlsx(buffer);
+  } catch {
+    nativeChartsBySheetName = {};
+  }
+  await workbook.xlsx.load(buffer);
+
+  const meta = parseWorkbookMetadata(workbook);
+  if (meta) {
+    const importedWorkbook = meta.workbook
+      ? normalizeImportedWorkbook(meta.workbook, meta.entry?.title || 'Imported Workbook')
+      : buildSingleSheetWorkbook(meta.entry?.title || file.name.replace(/\.[^.]+$/, '') || 'Imported Workbook', meta.sheet);
+    const primarySheet = importedWorkbook.sheets.find(sheet => sheet.id === importedWorkbook.activeSheetId) || importedWorkbook.sheets[0];
+    return {
+      title: String(meta.entry?.title || file.name.replace(/\.[^.]+$/, '') || 'Imported Workbook'),
+      category: meta.entry?.category === 'CSV' ? 'CSV' : 'Excel',
+      tags: Array.isArray(meta.entry?.tags) ? meta.entry.tags : [],
+      sheet: primarySheet,
+      workbook: importedWorkbook,
+      usedMetadata: true,
+    };
+  }
+
+  const visibleWorksheets = workbook.worksheets.filter(ws =>
+    ws.name !== TAGVAULT_META_SHEET && ws.state !== 'veryHidden' && ws.state !== 'hidden'
+  );
+  const importableWorksheets = visibleWorksheets.length
+    ? visibleWorksheets
+    : workbook.worksheets.filter(ws => ws.name !== TAGVAULT_META_SHEET);
+
+  if (!importableWorksheets.length) throw new Error('No worksheet found in this XLSX file.');
+
+  const importedWorkbook = normalizeImportedWorkbook({
+    activeSheetName: workbook.worksheets[workbook.views?.[0]?.activeTab || 0]?.name,
+    sheets: importableWorksheets.map((worksheet, index) => {
+      const rawRows = Math.min(worksheet.rowCount || 0, MAX_ROWS);
+      let rawCols = 0;
+      for (let ri = 1; ri <= rawRows; ri++) {
+        const row = worksheet.getRow(ri);
+        rawCols = Math.max(rawCols, Math.min(row.cellCount || row.actualCellCount || 0, MAX_COLS));
+      }
+
+      const rows = rawRows;
+      const cols = Math.min(rawCols, MAX_COLS);
+      const data = [];
+
+      for (let ri = 1; ri <= rows; ri++) {
+        const row = worksheet.getRow(ri);
+        const nextRow = [];
+        for (let ci = 1; ci <= cols; ci++) {
+          nextRow.push(formatImportedCellValue(row.getCell(ci)));
+        }
+        data.push(nextRow);
+      }
+
+      return {
+        id: `sheet-${index + 1}`,
+        name: worksheet.name,
+        rows,
+        cols,
+        data,
+        ...(nativeChartsBySheetName[worksheet.name]
+          ? { nativeChart: JSON.parse(JSON.stringify(nativeChartsBySheetName[worksheet.name])) }
+          : {}),
+      };
+    }),
+  }, file.name.replace(/\.[^.]+$/, '') || 'Imported Workbook');
+
+  const primarySheet = importedWorkbook.sheets.find(sheet => sheet.id === importedWorkbook.activeSheetId) || importedWorkbook.sheets[0];
+
+  return {
+    title: file.name.replace(/\.[^.]+$/, '') || primarySheet.name || 'Imported Workbook',
+    category: 'Excel',
+    tags: [],
+    sheet: primarySheet,
+    workbook: importedWorkbook,
+    usedMetadata: false,
+  };
+}
+
+// Robust CSV parser (handles quoted fields, commas inside quotes, escaped quotes)
+function parseCSV(text) {
+  const lines = text.split(/\r?\n/);
+  const result = [];
+  for (const line of lines) {
+    if (!line.trim()) continue;
+    const cells = [];
+    let cur = '', inQ = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (ch === '"') {
+        if (inQ && line[i + 1] === '"') { cur += '"'; i++; }
+        else inQ = !inQ;
+      } else if (ch === ',' && !inQ) {
+        cells.push(cur); cur = '';
+      } else {
+        cur += ch;
+      }
+    }
+    cells.push(cur);
+    result.push(cells);
+  }
+  return result;
+}
+
+createApp({
+  setup() {
+    const entries    = ref(loadEntries());
+    const categories = ref(loadCategories());
+    const catOpen    = ref(false);
+    const tagInput   = ref('');
+    const lastSaved  = ref('');
+    const toasts     = ref([]);
+    const titleInput = ref(null);
+    const categoryInput = ref(null);
+    const tagsInput = ref(null);
+    const fileInput  = ref(null);
+
+    // ── Load persisted form draft on startup ──
+    const form = ref(loadFormDraft());
+
+    // ── Auto-save form draft on every change ──
+    watch(form, (val) => saveFormDraft(val), { deep: true });
+
+    // ── Import state ──
+    // Restore saved import info and reconstruct File object from persisted text
+    const _savedImport   = loadImportInfo();
+    const _restoredFile  = reconstructFile(_savedImport);
+    const importFile     = ref(_restoredFile);           // real File — reconstructed from saved text
+    const importFileInfo = ref(_savedImport);            // { name, size, text } — persisted
+    const importDragover = ref(false);
+    const importProgress = ref(0);
+    const lastImportId   = ref(null);
+
+    function onImportFileChange(e) {
+      const f = e.target.files[0];
+      if (!f) return;
+      if (!validateImportFile(f)) {
+        if (fileInput.value) fileInput.value.value = '';
+        return;
+      }
+      cacheImportFile(f);
+    }
+
+    function onImportDrop(e) {
+      importDragover.value = false;
+      const f = e.dataTransfer.files[0];
+      if (!f) return;
+      if (!validateImportFile(f)) {
+        return;
+      }
+      cacheImportFile(f);
+    }
+
+    function clearImportFile() {
+      importFile.value = null;
+      importFileInfo.value = null;
+      importProgress.value = 0;
+      clearImportInfo();
+      if (fileInput.value) fileInput.value.value = '';
+    }
+
+    function formatFileSize(bytes) {
+      if (bytes < 1024) return bytes + ' B';
+      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+      return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+    }
+
+    function validateImportFile(file) {
+      if (!file) return false;
+      const kind = getImportKind(file);
+      if (!kind) {
+        showToast('Please select a .csv or .xlsx file only.', 'error');
+        return false;
+      }
+      if (file.size > HARD_MAX_BYTES) {
+        showToast(
+          `File is ${formatFileSize(file.size)}. This app currently supports imports up to about ${formatFileSize(HARD_MAX_BYTES)} in the browser.`,
+          'error'
+        );
+        return false;
+      }
+      if (file.size > RECOMMENDED_MAX_BYTES) {
+        showToast(
+          `File is ${formatFileSize(file.size)}. Import may be trimmed to ${MAX_ROWS} rows × ${MAX_COLS} cols to avoid browser storage issues.`,
+          'info'
+        );
+      }
+      return true;
+    }
+
+    function cacheImportFile(file) {
+      importFile.value = file;
+      const kind = getImportKind(file);
+      importFileInfo.value = { name: file.name, size: file.size, kind, text: null };
+      lastImportId.value = null;
+      if (kind !== 'csv') {
+        clearImportInfo();
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const text = ev.target.result;
+        importFileInfo.value = { name: file.name, size: file.size, kind, text };
+        saveImportInfo({ name: file.name, size: file.size, kind, text });
+      };
+      reader.readAsText(file, 'UTF-8');
+    }
+
+    async function runImport() {
+      if (!importFile.value) {
+        showToast('Please select a file to import', 'error');
+        return;
+      }
+
+      // Guard: warn if raw file is already huge
+      if (importFileInfo.value && importFileInfo.value.size > RECOMMENDED_MAX_BYTES) {
+        showToast(
+          `File is ${formatFileSize(importFileInfo.value.size)} — only the first ${MAX_ROWS} rows × ${MAX_COLS} cols will be imported to stay within browser storage limits.`,
+          'info'
+        );
+      }
+
+      importProgress.value = 5;
+      lastImportId.value = null;
+
+      const tick = setInterval(() => {
+        if (importProgress.value < 80) importProgress.value += 10;
+      }, 90);
+
+      try {
+        const kind = getImportKind(importFile.value);
+        let imported;
+
+        if (kind === 'csv') {
+          const cachedText = importFileInfo.value && importFileInfo.value.text;
+          const csvText = cachedText || await importFile.value.text();
+          const grid = parseCSV(csvText);
+          const importedWorkbook = buildSingleSheetWorkbook(
+            importFile.value.name.replace(/\.[^.]+$/, '') || 'Imported CSV',
+            {
+              rows: grid.length,
+              cols: grid.reduce((m, r) => Math.max(m, r.length), 0),
+              data: grid
+            }
+          );
+          imported = {
+            title: importFile.value.name.replace(/\.[^.]+$/, ''),
+            category: 'CSV',
+            tags: [],
+            sheet: importedWorkbook.sheets[0],
+            workbook: importedWorkbook,
+            usedMetadata: false,
+          };
+        } else {
+          if (importProgress.value < 25) importProgress.value = 25;
+          imported = await parseXlsxFile(importFile.value);
+        }
+
+        const { sheet } = imported;
+        const title = String(imported.title || importFile.value.name.replace(/\.[^.]+$/, '') || 'Imported Sheet');
+        const category = imported.category === 'CSV' ? 'CSV' : 'Excel';
+        const tags = [...new Set([...(Array.isArray(imported.tags) ? imported.tags : []), 'imported'])];
+
+        const existingIdx = entries.value.findIndex(
+          e => e.title === title && e.tags.includes('imported')
+        );
+        if (existingIdx !== -1) {
+          const existingId = entries.value[existingIdx].id;
+          entries.value.splice(existingIdx, 1);
+          const existingSheets = loadSheets();
+          delete existingSheets[existingId];
+          saveSheets(existingSheets);
+        }
+
+        const newEntry = {
+          id: nextId(entries.value),
+          title,
+          category,
+          tags,
+          createdAt: Date.now()
+        };
+        entries.value.unshift(newEntry);
+        saveEntries(entries.value);
+
+        try {
+          const sheets = loadSheets();
+          sheets[newEntry.id] = {
+            rows: sheet.rows,
+            cols: sheet.cols,
+            data: sheet.data,
+            ...(sheet.theme ? { theme: { ...sheet.theme } } : {}),
+            ...(sheet.cellStyles ? { cellStyles: { ...sheet.cellStyles } } : {}),
+            ...(sheet.styleMode ? { styleMode: sheet.styleMode } : {}),
+            ...(imported.workbook ? { workbook: cloneWorkbookForStorage(imported.workbook) } : {}),
+          };
+          saveSheets(sheets);
+        } catch (qErr) {
+          const safeRows = Math.min(sheet.rows, 100);
+          const safeData = sheet.data.slice(0, safeRows);
+          try {
+            const sheets = loadSheets();
+            sheets[newEntry.id] = {
+              rows: safeRows,
+              cols: sheet.cols,
+              data: safeData,
+              ...(sheet.theme ? { theme: { ...sheet.theme } } : {}),
+              ...(sheet.cellStyles ? { cellStyles: { ...sheet.cellStyles } } : {}),
+              ...(sheet.styleMode ? { styleMode: sheet.styleMode } : {}),
+            };
+            saveSheets(sheets);
+            showToast(`Storage full — only first 100 rows saved out of ${sheet.rawRows || sheet.rows}.`, 'info');
+          } catch {
+            showToast('Browser storage is full. Please delete old entries first.', 'error');
+            entries.value.shift();
+            saveEntries(entries.value);
+            importProgress.value = 0;
+            return;
+          }
+        }
+
+        importProgress.value = 100;
+        lastImportId.value   = newEntry.id;
+
+        const note = sheet.trimmed ? ` (capped at ${sheet.rows} rows × ${sheet.cols} cols)` : '';
+        const workbookDetail = imported.workbook?.sheets?.length > 1 ? ` • ${imported.workbook.sheets.length} sheets ready for render` : '';
+        const detail = imported.usedMetadata ? ' • TagVault layout restored' : '';
+        showToast(`"${title}" imported — ${sheet.rows} rows × ${sheet.cols} cols${note}${detail}${workbookDetail}`, 'success');
+
+        setTimeout(() => {
+          importProgress.value = 0;
+          clearImportFile();
+        }, 900);
+      } catch (err) {
+        importProgress.value = 0;
+        showToast('Import failed: ' + err.message, 'error');
+      } finally {
+        clearInterval(tick);
+      }
+    }
+
+    // ── Form helpers ──
+    function stepClass(n) {
+      if (n === 1) return form.value.title        ? 'done' : 'active';
+      if (n === 2) return form.value.category     ? 'done' : (form.value.title    ? 'active' : '');
+      if (n === 3) return form.value.tags.length  ? 'done' : (form.value.category ? 'active' : '');
+    }
+    function catColor(name) { return (categories.value.find(c => c.name === name) || {}).color || '#94a3b8'; }
+    function catIcon(name)  { return { CSV: '📄', Excel: '📊' }[name] || '🏷'; }
+    function getPillClass(t) {
+      return 'pill ' + ({ csv: 'pill-csv', excel: 'pill-excel' }[t.toLowerCase()] || 'pill-other');
+    }
+    function addTag() {
+      const val = tagInput.value.trim().replace(/,+$/, '');
+      if (val && !form.value.tags.includes(val)) {
+        form.value.tags.push(val);
+        tagsInput.value?.setCustomValidity('');
+      }
+      tagInput.value = '';
+    }
+    function removeTag(i) { form.value.tags.splice(i, 1); }
+    function onTagKeydown(e) {
+      if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); addTag(); }
+      else if (e.key === 'Backspace' && !tagInput.value && form.value.tags.length) form.value.tags.pop();
+    }
+    function addEntry() {
+      if (!form.value.title.trim()) {
+        const el = titleInput.value;
+        el.setCustomValidity('Please fill out this field.');
+        el.reportValidity();
+        el.addEventListener('input', () => el.setCustomValidity(''), { once: true });
+        return;
+      }
+      titleInput.value?.setCustomValidity('');
+      if (!form.value.category) {
+        const el = categoryInput.value;
+        if (el) {
+          el.setCustomValidity('Please fill out this field.');
+          el.reportValidity();
+        }
+        return;
+      }
+      categoryInput.value?.setCustomValidity('');
+      if (tagInput.value.trim()) addTag();
+      if (!form.value.tags.length) {
+        const el = tagsInput.value;
+        if (el) {
+          el.setCustomValidity('Please fill out this field.');
+          el.reportValidity();
+        }
+        return;
+      }
+      tagsInput.value?.setCustomValidity('');
+      const entry = { id: nextId(entries.value), ...JSON.parse(JSON.stringify(form.value)), createdAt: Date.now() };
+      entries.value.unshift(entry);
+      saveEntries(entries.value);
+      lastSaved.value = new Date().toLocaleTimeString();
+      showToast(`"${entry.title}" saved!`, 'success');
+      resetForm();
+    }
+
+    // Clear button — only clears Title, Category, Tags. Import file is NOT affected.
+    function resetForm() {
+      form.value = { title: '', category: '', tags: [] };
+      tagInput.value = '';
+      catOpen.value = false;
+      tagsInput.value?.setCustomValidity('');
+      clearFormDraft();
+    }
+    function showToast(msg, type = 'info') {
+      const id = Date.now();
+      toasts.value.push({ id, msg, type });
+      setTimeout(() => { toasts.value = toasts.value.filter(t => t.id !== id); }, 2600);
+    }
+
+    const TAG_SUGGESTIONS = {
+      'Excel': [
+        'quarterly-report', '2024', 'finance', 'budget',
+        'sales-data', 'monthly', 'summary',
+        'hr-records', 'employees', 'payroll'
+      ],
+      'CSV': [
+        'raw-data', 'imported', 'survey',
+        'customer-list', 'leads', 'contacts',
+        'transactions', 'audit', 'Q1'
+      ]
+    };
+
+    const tagSuggestions = computed(() =>
+      TAG_SUGGESTIONS[form.value.category] || []
+    );
+
+    function addSuggestedTag(tag) {
+      if (!form.value.tags.includes(tag)) {
+        form.value.tags.push(tag);
+        tagsInput.value?.setCustomValidity('');
+      }
+    }
+
+    const recentEntries = computed(() => entries.value.slice(0, 5));
+
+    return {
+      entries, categories, catOpen, tagInput, lastSaved, toasts, form, titleInput, categoryInput, tagsInput, fileInput,
+      stepClass, catColor, catIcon, getPillClass,
+      addTag, removeTag, onTagKeydown, addEntry, resetForm,
+      recentEntries, formatDate,
+      tagSuggestions, addSuggestedTag,
+      importFile, importFileInfo, importDragover, importProgress, lastImportId,
+      onImportFileChange, onImportDrop, clearImportFile, formatFileSize, runImport,
+      RECOMMENDED_MAX_BYTES, MAX_ROWS, MAX_COLS,
+    };
+  },
+  directives: {
+    'click-outside': {
+      mounted(el, binding) {
+        el._handler = e => { if (!el.contains(e.target)) binding.value(e); };
+        document.addEventListener('mousedown', el._handler);
+      },
+      unmounted(el) { document.removeEventListener('mousedown', el._handler); }
+    }
+  }
+}).mount('#app');
+</script>
+</body>
+</html>

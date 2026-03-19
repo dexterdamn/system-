@@ -1,0 +1,1502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TagVault — Inventory</title>
+<script src="theme.js"></script>
+<script>window.initTagVaultTheme && window.initTagVaultTheme();</script>
+<script>window.ensureTagVaultFontPack && window.ensureTagVaultFontPack('core');</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.4.21/vue.global.prod.min.js"></script>
+<link rel="stylesheet" href="style/index.css">
+<link rel="stylesheet" href="style/inventory.css">
+</head>
+<body>
+<div id="app">
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-logo">
+        <div class="brand-icon">🏷</div>
+        <div><div class="brand-name">Inventory</div><div class="brand-sub">Tag Management</div></div>
+      </div>
+    </div>
+    <div class="nav-section">
+      <div class="nav-label">Pages</div>
+      <a href="index.html" class="nav-link"><span class="nav-icon">✚</span> Add Entry</a>
+      <a href="inventory.html" class="nav-link active">
+        <span class="nav-icon">📦</span> Inventory
+        <span class="nav-badge">{{ entries.length }}</span>
+      </a>
+      <a href="render.html" class="nav-link"><span class="nav-icon">📊</span> Render View</a>
+    </div>
+    <div class="sidebar-footer">{{ entries.length }} records · {{ totalTags }} tags</div>
+  </aside>
+
+  <!-- CONTENT -->
+  <div class="content">
+    <div class="topbar">
+      <div>
+        <div class="topbar-title">Inventory</div>
+        <div class="topbar-sub">Click a title to open and edit its data sheet</div>
+      </div>
+      <div class="topbar-actions">
+        <div class="search-wrap">
+          <span class="search-icon">🔍</span>
+          <input class="search-input" v-model="search" placeholder="Search title, tag, category..." />
+        </div>
+        <label class="theme-toggle">
+          <span class="sr-only">Toggle color theme</span>
+          <input class="theme-toggle-input" data-theme-toggle type="checkbox" aria-label="Toggle color theme">
+          <svg width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" stroke="currentColor" fill="none" class="theme-toggle-icon theme-toggle-icon-sun"><circle r="5" cy="12" cx="12"></circle><line y2="3" y1="1" x2="12" x1="12"></line><line y2="23" y1="21" x2="12" x1="12"></line><line y2="5.64" y1="4.22" x2="5.64" x1="4.22"></line><line y2="19.78" y1="18.36" x2="19.78" x1="18.36"></line><line y2="12" y1="12" x2="3" x1="1"></line><line y2="12" y1="12" x2="23" x1="21"></line><line y2="18.36" y1="19.78" x2="5.64" x1="4.22"></line><line y2="4.22" y1="5.64" x2="19.78" x1="18.36"></line></svg>
+          <svg viewBox="0 0 24 24" class="theme-toggle-icon theme-toggle-icon-moon"><path d="m12.3 4.9c.4-.2.6-.7.5-1.1s-.6-.8-1.1-.8c-4.9.1-8.7 4.1-8.7 9 0 5 4 9 9 9 3.8 0 7.1-2.4 8.4-5.9.2-.4 0-.9-.4-1.2s-.9-.2-1.2.1c-1 .9-2.3 1.4-3.7 1.4-3.1 0-5.7-2.5-5.7-5.7 0-1.9 1.1-3.8 2.9-4.8zm2.8 12.5c.5 0 1 0 1.4-.1-1.2 1.1-2.8 1.7-4.5 1.7-3.9 0-7-3.1-7-7 0-2.5 1.4-4.8 3.5-6-.7 1.1-1 2.4-1 3.8-.1 4.2 3.4 7.6 7.6 7.6z"></path></svg>
+        </label>
+      </div>
+    </div>
+
+    <div class="page">
+
+      <!-- Stats -->
+      <div class="stats-row">
+        <div class="stat-card stat-card--blue">
+          <div class="stat-card__icon">📦</div>
+          <div class="stat-card__content"><div class="stat-num">{{ entries.length }}</div><div class="stat-label">Total Records</div></div>
+        </div>
+        <div class="stat-card stat-card--violet">
+          <div class="stat-card__icon">🏷️</div>
+          <div class="stat-card__content"><div class="stat-num">{{ totalTags }}</div><div class="stat-label">Total Tags</div></div>
+        </div>
+        <div class="stat-card stat-card--green">
+          <div class="stat-card__icon">📂</div>
+          <div class="stat-card__content"><div class="stat-num">{{ uniqueCats }}</div><div class="stat-label">Categories</div></div>
+        </div>
+        <div class="stat-card stat-card--csv">
+          <div class="stat-card__icon">📄</div>
+          <div class="stat-card__content"><div class="stat-num">{{ csvCount }}</div><div class="stat-label">CSV Files</div></div>
+        </div>
+        <div class="stat-card stat-card--excel">
+          <div class="stat-card__icon">📊</div>
+          <div class="stat-card__content"><div class="stat-num">{{ excelCount }}</div><div class="stat-label">Excel Files</div></div>
+        </div>
+      </div>
+
+      <!-- Filter chips -->
+      <div class="filter-row">
+        <div class="chip" :class="{active:catFilter===''}" @click="catFilter=''">All</div>
+        <div class="chip" v-for="c in categories" :key="c.name" :class="{active:catFilter===c.name}" @click="catFilter=catFilter===c.name?'':c.name">
+          <span class="chip__dot" :style="{background:c.color}"></span>{{ c.name }}
+        </div>
+      </div>
+
+      <!-- Bulk bar -->
+      <div class="bulk-bar" v-if="selected.length">
+        <span>{{ selected.length }} selected</span>
+        <button class="btn btn-sm" style="background:rgba(255,255,255,.2);color:#fff;border:none" @click="confirmDelete=true">🗑 Delete Selected</button>
+        <button class="btn btn-sm" style="background:transparent;color:rgba(255,255,255,.7);border:none" @click="selected=[]">✕ Cancel</button>
+      </div>
+
+      <!-- Table -->
+      <div class="table-card">
+        <div class="table-head table-head-inv">
+          <div class="th"><input type="checkbox" @change="toggleAll" :checked="allSelected" style="cursor:pointer"/></div>
+          <div class="th" style="display:flex;align-items:center;gap:4px">Title <button class="sort-btn" :class="sortField==='title'?sortDir:''" @click.stop="setSort('title')">{{ sortField==='title'?(sortDir==='asc'?'↑':'↓'):'↕' }}</button></div>
+          <div class="th">Category</div>
+          <div class="th">Tags</div>
+          <div class="th" style="display:flex;align-items:center;gap:4px">Date <button class="sort-btn" :class="sortField==='createdAt'?sortDir:''" @click.stop="setSort('createdAt')">{{ sortField==='createdAt'?(sortDir==='asc'?'↑':'↓'):'↕' }}</button></div>
+          <div class="th">Actions</div>
+        </div>
+
+        <div class="table-body" style="max-height:none;overflow:visible">
+          <div v-if="filteredEntries.length===0" class="empty">
+            <div class="empty-icon">📂</div>
+            <div class="empty-msg">No entries found</div>
+            <div class="empty-sub"><a href="index.html" style="color:var(--accent)">Add a new entry</a></div>
+          </div>
+
+          <div class="table-row table-row-inv" v-for="e in filteredEntries" :key="e.id"
+            :style="selected.includes(e.id)?'background:var(--accent-s)':''">
+            <div @click.stop><input type="checkbox" :checked="selected.includes(e.id)" @change="toggleSelect(e.id)" style="cursor:pointer"/></div>
+            <div><div class="title-link" @click="openSheet(e)">{{ e.title }}</div></div>
+            <div><span class="cat-badge" :style="{background:catColor(e.category)+'18',color:catColor(e.category)}">{{ e.category }}</span></div>
+            <div class="tag-list">
+              <span class="pill" v-for="t in e.tags.slice(0,3)" :key="t" :class="getPillClass(t)" style="font-size:11px;padding:2px 8px">{{ t }}</span>
+              <span v-if="e.tags.length>3" class="pill pill-other" style="font-size:11px;padding:2px 8px">+{{ e.tags.length-3 }}</span>
+            </div>
+            <div class="text-sm text-muted font-mono">{{ formatDate(e.createdAt) }}</div>
+            <div class="flex gap-8">
+              <button class="btn-icon" title="Open Sheet" @click="openSheet(e)">📊</button>
+              <button class="btn-icon" title="Edit" @click="startEdit(e)">✏️</button>
+              <button class="btn-icon danger" title="Delete" @click="deleteOne(e.id)">🗑</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="font-size:11px;color:var(--text3);margin-top:10px;text-align:center">
+        💡 Click any title or 📊 to open its data sheet · Chart type is auto-detected from data
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ EXCEL SHEET MODAL ══ -->
+<div class="excel-overlay" :class="{open: sheetEntry}" @click.self="closeSheet">
+  <div class="excel-modal" v-if="sheetEntry" @keydown="onSheetShortcutKeydown">
+
+    <div class="excel-modal-header" :class="'cat-'+sheetEntry.category.toLowerCase()">
+      <span style="font-size:18px">📊</span>
+      <div class="excel-modal-title">{{ sheetEntry.title }}</div>
+      <span class="excel-modal-cat">{{ sheetEntry.category }}</span>
+      <button class="excel-modal-close" @click="closeSheet">✕</button>
+    </div>
+
+    <!-- ── TOOLBAR ── -->
+    <div class="excel-toolbar">
+      <div class="excel-toolbar-main">
+        <span class="excel-toolbar-label">Grid Size:</span>
+        <div class="excel-grid-input">Rows <input type="number" min="1" max="200" v-model.number="gridRows" @change="resizeGrid" /></div>
+        <div class="excel-grid-input">Cols <input type="number" min="1" max="26" v-model.number="gridCols" @change="resizeGrid" /></div>
+        <button class="excel-toolbar-btn" @click="addRow">+ Row</button>
+        <button class="excel-toolbar-btn" @click="addCol">+ Col</button>
+        <button class="excel-toolbar-btn" @click="clearGrid">🗑 Clear All</button>
+        <!-- <button class="excel-toolbar-btn" @click="exportCSV">⬇ CSV</button> -->
+
+        <!-- ── COLOR DROPDOWN TRIGGER ── -->
+        <div class="color-picker-wrap" ref="colorPickerWrapRef" v-click-outside="closeColorDropdown">
+          <button
+            class="excel-toolbar-btn color-picker-trigger"
+            :class="{active: showColorDropdown}"
+            @click.stop="toggleColorDropdown"
+          >
+            <span class="color-trigger-icon">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="1" y="1" width="12" height="8" rx="1.5" :fill="selectedColorValue" stroke="#bbb" stroke-width="1"/>
+                <text x="7" y="8" font-size="6" text-anchor="middle" fill="#fff" font-weight="700" font-family="sans-serif">A</text>
+              </svg>
+            </span>
+            Colors
+            <span class="color-trigger-caret">▾</span>
+          </button>
+
+          <!-- ── WORD-STYLE COLOR DROPDOWN ── -->
+          <div class="color-dropdown" v-if="showColorDropdown" @click.stop>
+
+            <!-- Mode switcher (Fill / Text / Border) -->
+            <div class="color-dropdown-modes">
+              <button
+                v-for="mode in ['fill','text','border']"
+                :key="mode"
+                class="color-mode-tab"
+                :class="{active: colorMode===mode}"
+                @click="setColorMode(mode)"
+              >{{ mode.charAt(0).toUpperCase()+mode.slice(1) }}</button>
+            </div>
+
+            <!-- Selection info -->
+            <div class="color-dropdown-selection" v-if="activeSelectionLabel">
+              <span class="color-dropdown-selection-label">Selected:</span>
+              <strong>{{ activeSelectionLabel }}</strong>
+              <button class="color-dropdown-reset-btn" @click="clearActiveSelectionFormat" :disabled="!hasActiveSelection">
+                Reset
+              </button>
+            </div>
+            <div class="color-dropdown-selection color-dropdown-selection--hint" v-else>
+              Click a cell first, then choose a color.
+            </div>
+
+            <!-- Theme Colors -->
+            <div class="color-dropdown-section-label">Theme Colors</div>
+            <div class="color-dropdown-grid color-dropdown-grid--theme">
+              <button
+                v-for="color in themePalette"
+                :key="'t-'+color"
+                class="color-swatch"
+                :class="{selected: selectedColorValue===color}"
+                :style="{background: color}"
+                :title="color"
+                @click="applyColorToActiveSelection(color)"
+              ></button>
+            </div>
+
+            <!-- Standard Colors -->
+            <div class="color-dropdown-section-label">Standard Colors</div>
+            <div class="color-dropdown-grid color-dropdown-grid--standard">
+              <button
+                v-for="color in standardPalette"
+                :key="'s-'+color"
+                class="color-swatch"
+                :class="{selected: selectedColorValue===color}"
+                :style="{background: color}"
+                :title="color"
+                @click="applyColorToActiveSelection(color)"
+              ></button>
+            </div>
+
+            <!-- Footer: No Fill -->
+            <div class="color-dropdown-footer-row color-dropdown-footer-row--nofill"
+              :class="{disabled: !hasActiveSelection || colorMode!=='fill'}"
+              @click="(!hasActiveSelection || colorMode!=='fill') ? null : applyTransparentToActiveSelection()">
+              <span class="color-nofill-checkbox">
+                <span class="color-nofill-checkbox-inner"></span>
+              </span>
+              <span class="color-footer-label">No Fill</span>
+            </div>
+
+            <!-- Footer: More Colors -->
+            <div class="color-dropdown-footer-row color-dropdown-footer-row--more" @click="openMoreColors">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M8 1.5C4.41 1.5 1.5 4.41 1.5 8C1.5 11.59 4.41 14.5 8 14.5C11.59 14.5 14.5 11.59 14.5 8C14.5 4.41 11.59 1.5 8 1.5Z" fill="#e8e8e8" stroke="#aaa" stroke-width="0.8"/>
+                <path d="M8 1.5C4.41 1.5 1.5 4.41 1.5 8" stroke="#e53935" stroke-width="2.2" stroke-linecap="round"/>
+                <path d="M8 1.5C11.59 1.5 14.5 4.41 14.5 8" stroke="#f9a825" stroke-width="2.2" stroke-linecap="round"/>
+                <path d="M1.5 8C1.5 11.59 4.41 14.5 8 14.5" stroke="#43a047" stroke-width="2.2" stroke-linecap="round"/>
+                <path d="M14.5 8C14.5 11.59 11.59 14.5 8 14.5" stroke="#1e88e5" stroke-width="2.2" stroke-linecap="round"/>
+                <circle cx="8" cy="8" r="2.5" fill="#fff" stroke="#ccc" stroke-width="0.5"/>
+              </svg>
+              <span class="color-footer-label">More Colors...</span>
+            </div>
+          </div>
+        </div>
+        <!-- ── END COLOR DROPDOWN ── -->
+
+        <div class="excel-type-tools">
+          <div class="font-picker-wrap" ref="fontPickerWrapRef" v-click-outside="closeFontDropdown">
+            <button class="font-picker-trigger" :disabled="!hasActiveSelection" @click.stop="toggleFontDropdown">
+              <span class="font-picker-trigger-label" :style="{fontFamily: selectedFontFamily}">{{ selectedFontLabel }}</span>
+              <span class="font-picker-caret">▾</span>
+            </button>
+            <div class="font-picker-dropdown" v-if="showFontDropdown" @click.stop>
+              <template v-if="recentFontOptions.length">
+                <div class="font-picker-section-title">Recent</div>
+                <button
+                  v-for="font in recentFontOptions"
+                  :key="'recent-'+font.value"
+                  class="font-picker-option"
+                  :class="{active: selectedFontFamily===font.value}"
+                  @click="setFontFamily(font.value)"
+                >
+                  <span class="font-picker-check">{{ selectedFontFamily===font.value ? '✓' : '' }}</span>
+                  <span class="font-picker-option-label" :style="{fontFamily: font.value}">{{ font.label }}</span>
+                </button>
+                <div class="font-picker-divider"></div>
+              </template>
+
+              <div class="font-picker-section-title">All Fonts</div>
+              <button
+                v-for="font in fontOptions"
+                :key="font.value"
+                class="font-picker-option"
+                :class="{active: selectedFontFamily===font.value}"
+                @click="setFontFamily(font.value)"
+              >
+                <span class="font-picker-check">{{ selectedFontFamily===font.value ? '✓' : '' }}</span>
+                <span class="font-picker-option-label" :style="{fontFamily: font.value}">{{ font.label }}</span>
+              </button>
+            </div>
+          </div>
+          <button class="excel-format-btn excel-bold-btn" :class="{active: selectedBold}" :disabled="!hasActiveSelection" title="Bold" @click="toggleBold">B</button>
+          <button class="excel-format-btn excel-italic-btn" :class="{active: selectedItalic}" :disabled="!hasActiveSelection" title="Italic" @click="toggleItalic">I</button>
+        </div>
+
+        <div class="excel-paragraph-tools">
+          <button class="excel-paragraph-btn" title="Align Left" :class="{active: selectedTextAlign==='left'}" @click="setTextAlign('left')">
+            <span class="align-icon align-left"></span>
+          </button>
+          <button class="excel-paragraph-btn" title="Align Center" :class="{active: selectedTextAlign==='center'}" @click="setTextAlign('center')">
+            <span class="align-icon align-center"></span>
+          </button>
+          <button class="excel-paragraph-btn" title="Align Right" :class="{active: selectedTextAlign==='right'}" @click="setTextAlign('right')">
+            <span class="align-icon align-right"></span>
+          </button>
+        </div>
+
+        <div class="excel-toolbar-spacer"></div>
+        <div class="excel-toolbar-save-slot">
+          <button class="excel-toolbar-btn primary excel-save-btn" :class="'cat-'+sheetEntry.category.toLowerCase()+'-primary'" @click="saveGrid">💾 Save</button>
+         
+          <!-- <span class="unsaved-pill" v-if="isDirty">● Unsaved</span> -->
+          <!-- <span class="saved-pill" v-else-if="justSaved">✓ Saved</span> -->
+        </div>
+      </div>
+    </div>
+    <!-- ── END TOOLBAR ── -->
+
+    <div v-if="showExpandedEditor" class="cell-editor-card" :class="['cat-'+sheetEntry.category.toLowerCase(), {'is-idle': !hasEditorTarget}]">
+      <div class="cell-editor-head">
+        <div class="cell-editor-meta">
+          <span class="cell-editor-badge">{{ hasEditorTarget ? activeCellLabel : 'Ready' }}</span>
+          <div>
+            <div class="cell-editor-title">text editor</div>
+            <div class="cell-editor-sub">{{ hasEditorTarget ? 'The selected cell is mirrored here so you can edit full text comfortably.' : 'Select any cell below and edit it here in a larger writing area.' }}</div>
+          </div>
+        </div>
+        <button class="cell-editor-action" :disabled="!hasEditorTarget" @click="clearActiveCellValue">Clear</button>
+      </div>
+      <textarea
+        ref="expandedEditorRef"
+        class="cell-editor-input"
+        :value="activeCellValue"
+        :disabled="!hasEditorTarget"
+        :style="{ fontFamily: selectedFontFamily, fontWeight: selectedBold ? '700' : '500', fontStyle: selectedItalic ? 'italic' : 'normal' }"
+        :placeholder="hasEditorTarget ? 'Type long notes, source text, or descriptions here...' : 'Select a cell from the table to start editing here...'"
+        @input="ev=>updateActiveCellFromEditor(ev.target.value)"
+        @keydown.esc.prevent="focusActiveCellInput"
+      ></textarea>
+      <div class="cell-editor-foot">
+        <span class="cell-editor-footnote">Best for sources, notes, and longer labels that do not fit nicely inside one cell.</span>
+        <button class="cell-editor-link" :disabled="!hasEditorTarget" @click="focusActiveCellInput">Jump to cell</button>
+      </div>
+    </div>
+
+    <div class="excel-scroll" @keydown="onGridKeydown" @mouseup="finishRangeSelection" @mouseleave="finishRangeSelection">
+      <table class="excel-table" :style="tableThemeStyle()">
+        <thead>
+          <tr>
+            <th class="col-num-header corner-select" :class="{'selection-active':selectAllMode}" @click="selectAllCells"></th>
+            <th v-for="(col,ci) in gridCols" :key="ci" :class="{'col-active':activeCell&&activeCell[1]===ci,'selection-active':activeCol===ci}" @click="selectCol(ci)">{{ colLetter(ci) }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="(row,ri) in gridData" :key="ri" :class="tableRowClass(row, ri)">
+            <td class="row-num-cell" :class="{'row-active':activeCell&&activeCell[0]===ri,'row-selected':activeRow===ri}" @click="selectRow(ri)">{{ ri+1 }}</td>
+            <td v-for="(cell,ci) in row" :key="ci" class="data-cell"
+              :class="[tableCellClass(row, ri, ci), cellSelectionClass(ri, ci), {'data-cell--long': isLongCellValue(cell)}]"
+              :style="cellBoxStyle(ri, ci)"
+              @mousedown.prevent="startRangeSelection(ri,ci)"
+              @mouseenter="extendRangeSelection(ri,ci)"
+              @mouseup="finishRangeSelection">
+              <input class="cell-input" :ref="el=>setCellRef(el,ri,ci)"
+                :value="cell"
+                :title="cell"
+                :class="{'cell-input--long': isLongCellValue(cell)}"
+                :style="cellInputStyle(ri, ci)"
+                @mousedown.stop="startRangeSelection(ri,ci)"
+                @input="ev=>updateCell(ri,ci,ev.target.value)"
+                @focus="onCellFocus(ri,ci)"
+                @dblclick.stop="focusExpandedEditor()"
+                @keydown="onCellInputKeydown($event,ri,ci)" />
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+</div>
+
+<!-- Edit Modal -->
+<div class="modal-overlay" v-if="editEntry" @click.self="editEntry=null">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Edit Entry</div>
+      <button class="btn-icon" @click="editEntry=null">✕</button>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Title</label>
+      <input class="input" v-model="editEntry.title" />
+    </div>
+    <div class="form-group">
+      <label class="form-label">Category</label>
+      <div class="select-wrap">
+        <div class="select-btn" :class="{open:editCatOpen}" @click="editCatOpen=!editCatOpen">
+          <span style="display:flex;align-items:center;gap:8px"><span class="cat-dot" :style="{background:catColor(editEntry.category)}"></span>{{ editEntry.category }}</span>
+          <span class="select-arrow">▼</span>
+        </div>
+        <div class="dropdown" v-if="editCatOpen">
+          <div class="dropdown-item" v-for="c in categories" :key="c.name" :class="{active:editEntry.category===c.name}" @click="editEntry.category=c.name;editCatOpen=false">
+            <span class="cat-dot" :style="{background:c.color}"></span>{{ c.name }}
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Tags</label>
+      <div class="tag-input-wrap" @click="$refs.editTagIn.focus()">
+        <span class="pill" v-for="(t,i) in editEntry.tags" :key="i" :class="getPillClass(t)">{{ t }}<span class="pill-x" @click.stop="editEntry.tags.splice(i,1)">×</span></span>
+        <input ref="editTagIn" class="tag-raw-input" v-model="editTagInput" placeholder="Add tag..." @keydown="onEditTagKey"/>
+      </div>
+    </div>
+    <div class="flex gap-12">
+      <button class="btn btn-primary" @click="saveEdit">Save Changes</button>
+      <button class="btn btn-ghost" @click="editEntry=null">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Confirm Delete -->
+<div class="confirm-overlay" v-if="confirmDelete">
+  <div class="confirm-box">
+    <div class="confirm-title">Delete {{ selected.length }} entr{{ selected.length===1?'y':'ies' }}?</div>
+    <div class="confirm-sub">This action cannot be undone.</div>
+    <div class="flex gap-12">
+      <button class="btn btn-danger" @click="bulkDelete">Delete</button>
+      <button class="btn btn-ghost" @click="confirmDelete=false">Cancel</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ══ MORE COLORS DIALOG (Word-style) ══ -->
+<div class="mcd-overlay" v-if="showMoreColors" @click.self="cancelMoreColors">
+  <div class="mcd-dialog">
+
+    <!-- Title bar -->
+    <div class="mcd-titlebar">
+      <span class="mcd-title">Colors</span>
+      <div class="mcd-titlebar-btns">
+        <button class="mcd-win-btn mcd-close" @click="cancelMoreColors">✕</button>
+      </div>
+    </div>
+
+    <div class="mcd-body">
+      <!-- LEFT: tabs + content -->
+      <div class="mcd-left">
+
+        <!-- Tabs -->
+        <div class="mcd-tabs">
+          <button class="mcd-tab" :class="{active: mcdTab==='standard'}" @click="switchMcdTab('standard')">Standard</button>
+          <button class="mcd-tab" :class="{active: mcdTab==='custom'}" @click="switchMcdTab('custom')">Custom</button>
+        </div>
+        <div class="mcd-tabs-underline"></div>
+
+        <!-- ── Standard tab ── -->
+        <div v-if="mcdTab==='standard'" class="mcd-standard-wrap">
+          <div class="mcd-standard-label">Colors:</div>
+          <div class="mcd-honeycomb">
+            <button
+              v-for="c in mcdStandardColors"
+              :key="c"
+              class="mcd-honey-swatch"
+              :style="{background: c}"
+              :title="c"
+              :class="{selected: mcdPickedColor===c}"
+              @click="mcdPickedColor=c; mcdSyncFromHex(c)"
+            ></button>
+          </div>
+        </div>
+
+        <!-- ── Custom tab ── -->
+        <div v-if="mcdTab==='custom'" class="mcd-custom-wrap">
+          <div class="mcd-spectrum-label">Colors:</div>
+
+          <!-- Spectrum: canvas + hue strip -->
+          <div class="mcd-spectrum-area">
+            <!-- Main SV canvas -->
+            <canvas
+              ref="mcdCanvasRef"
+              class="mcd-canvas"
+              width="230" height="165"
+              @mousedown="mcdCanvasDown"
+              @mousemove="mcdCanvasMove"
+              @mouseup="mcdCanvasUp"
+            ></canvas>
+            <!-- Crosshair over canvas -->
+            <div class="mcd-crosshair"
+              :style="{left: mcdCursorX+'px', top: mcdCursorY+'px'}"
+            ></div>
+
+            <!-- Hue strip + ◄ handle -->
+            <div class="mcd-hue-strip-wrap">
+              <canvas
+                ref="mcdHueRef"
+                class="mcd-hue-strip"
+                width="14" height="165"
+                @mousedown="mcdHueDown"
+                @mousemove="mcdHueMove"
+                @mouseup="mcdHueUp"
+              ></canvas>
+              <div class="mcd-hue-handle" :style="{top: mcdHueCursorY+'px'}">◄</div>
+            </div>
+          </div>
+
+          <!-- Color model -->
+          <div class="mcd-model-row">
+            <span class="mcd-model-label">Color model:</span>
+            <div class="mcd-model-select">RGB <span class="mcd-model-arrow">▼</span></div>
+          </div>
+
+          <!-- RGB channels -->
+          <div class="mcd-channel-row">
+            <span class="mcd-channel-label">Red:</span>
+            <div class="mcd-spinbox">
+              <input type="number" min="0" max="255" :value="mcdR"
+                @change="mcdSetR($event.target.value)"
+                @input="mcdSetR($event.target.value)" />
+              <div class="mcd-spin-btns">
+                <button @mousedown.prevent="mcdR=Math.min(255,mcdR+1);mcdSyncFromRgb()">▲</button>
+                <button @mousedown.prevent="mcdR=Math.max(0,mcdR-1);mcdSyncFromRgb()">▼</button>
+              </div>
+            </div>
+          </div>
+          <div class="mcd-channel-row">
+            <span class="mcd-channel-label">Green:</span>
+            <div class="mcd-spinbox">
+              <input type="number" min="0" max="255" :value="mcdG"
+                @change="mcdSetG($event.target.value)"
+                @input="mcdSetG($event.target.value)" />
+              <div class="mcd-spin-btns">
+                <button @mousedown.prevent="mcdG=Math.min(255,mcdG+1);mcdSyncFromRgb()">▲</button>
+                <button @mousedown.prevent="mcdG=Math.max(0,mcdG-1);mcdSyncFromRgb()">▼</button>
+              </div>
+            </div>
+          </div>
+          <div class="mcd-channel-row">
+            <span class="mcd-channel-label">Blue:</span>
+            <div class="mcd-spinbox">
+              <input type="number" min="0" max="255" :value="mcdB"
+                @change="mcdSetB($event.target.value)"
+                @input="mcdSetB($event.target.value)" />
+              <div class="mcd-spin-btns">
+                <button @mousedown.prevent="mcdB=Math.min(255,mcdB+1);mcdSyncFromRgb()">▲</button>
+                <button @mousedown.prevent="mcdB=Math.max(0,mcdB-1);mcdSyncFromRgb()">▼</button>
+              </div>
+            </div>
+          </div>
+          <div class="mcd-channel-row">
+            <span class="mcd-channel-label">Hex:</span>
+            <input class="mcd-hex-input"
+              :value="mcdHexInput"
+              @change="mcdSyncFromHex($event.target.value)"
+              @blur="mcdSyncFromHex($event.target.value)"
+              maxlength="7" />
+          </div>
+        </div>
+
+      </div>
+
+      <!-- RIGHT: OK/Cancel + New/Current preview -->
+      <div class="mcd-right">
+        <button class="mcd-ok-btn" @click="confirmMoreColors">OK</button>
+        <button class="mcd-cancel-btn" @click="cancelMoreColors">Cancel</button>
+
+        <div class="mcd-preview-area">
+          <div class="mcd-preview-label mcd-preview-new-label">New</div>
+          <div class="mcd-preview-swatch mcd-preview-new"  :style="{background: mcdPickedColor}"></div>
+          <div class="mcd-preview-swatch mcd-preview-current" :style="{background: mcdCurrentColor}"></div>
+          <div class="mcd-preview-label mcd-preview-current-label">Current</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- Toast -->
+<div class="toast-container">
+  <div class="toast" v-for="t in toasts" :key="t.id" :class="t.type">{{ t.msg }}</div>
+</div>
+</div>
+
+<script src="data.js"></script>
+<script>
+const { createApp, ref, computed, nextTick, onMounted, onBeforeUnmount } = Vue;
+const SHEET_STORE  = 'tagvault_sheets';
+const RECENT_FONTS_STORE = 'tagvault_recent_fonts';
+const DEFAULT_ROWS = 20;
+const DEFAULT_COLS = 8;
+const THEME_PALETTE = [
+  // Row 1 - base colors (10 cols)
+  '#FFFFFF','#000000','#E7E6E6','#44546A','#4472C4','#ED7D31','#A9D18E','#FF0000','#FFC000','#70AD47',
+  // Row 2 - lighter tints
+  '#F2F2F2','#808080','#D6DCE4','#D6DCE4','#D6E4F0','#FCE4D6','#EBF3E8','#FFE0E0','#FFF2CC','#E9F5E1',
+  // Row 3
+  '#D9D9D9','#595959','#ADB9CA','#ADB9CA','#9DC3E6','#F8CBAD','#C6EFCE','#FFBFBF','#FFE699','#D5F0C1',
+  // Row 4
+  '#BFBFBF','#404040','#8496B0','#8496B0','#2E75B6','#C65911','#70AD47','#FF0000','#FFD966','#92D050',
+  // Row 5
+  '#A6A6A6','#262626','#596A82','#596A82','#1F4E79','#843C0C','#375623','#C00000','#BF8F00','#375623',
+  // Row 6 - darkest shades
+  '#808080','#0D0D0D','#222A35','#222A35','#17375E','#622300','#1E4124','#820000','#7F6000','#1E4124',
+];
+const STANDARD_PALETTE = ['#C00000', '#FF0000', '#FFC000', '#FFFF00', '#92D050', '#00B050', '#00B0F0', '#0070C0', '#002060', '#7030A0'];
+
+function loadSheets() { try { return JSON.parse(localStorage.getItem(SHEET_STORE)) || {}; } catch { return {}; } }
+function saveSheets(data) { localStorage.setItem(SHEET_STORE, JSON.stringify(data)); }
+function loadRecentFonts() { try { return JSON.parse(localStorage.getItem(RECENT_FONTS_STORE)) || []; } catch { return []; } }
+function saveRecentFonts(fonts) { localStorage.setItem(RECENT_FONTS_STORE, JSON.stringify(fonts)); }
+function makeGrid(rows, cols) { return Array.from({length:rows},()=>Array(cols).fill('')); }
+function normalizeStoredSheetRecord(sheet, fallbackName = 'Sheet 1', fallbackId = 'sheet-1') {
+  const rows = Math.max(0, parseInt(sheet?.rows, 10) || 0);
+  const cols = Math.max(0, parseInt(sheet?.cols, 10) || 0);
+  return {
+    id: String(sheet?.id || fallbackId),
+    name: String(sheet?.name || fallbackName),
+    rows,
+    cols,
+    data: resizeGridData(Array.isArray(sheet?.data) ? sheet.data : [], rows, cols),
+    theme: { ...(sheet?.theme || {}) },
+    cellStyles: { ...(sheet?.cellStyles || {}) },
+    styleMode: sheet?.styleMode || '',
+  };
+}
+function normalizeStoredWorkbook(saved, fallbackName = 'Sheet 1') {
+  const workbookSheets = Array.isArray(saved?.workbook?.sheets) && saved.workbook.sheets.length
+    ? saved.workbook.sheets.map((sheet, index) =>
+        normalizeStoredSheetRecord(sheet, sheet?.name || `Sheet ${index + 1}`, sheet?.id || `sheet-${index + 1}`)
+      )
+    : [normalizeStoredSheetRecord(saved, fallbackName, 'sheet-1')];
+  let activeSheetId = String(saved?.workbook?.activeSheetId || '');
+  if (!workbookSheets.some(sheet => sheet.id === activeSheetId)) {
+    activeSheetId = workbookSheets[0]?.id || 'sheet-1';
+  }
+  return { activeSheetId, sheets: workbookSheets };
+}
+function detectSheetStyleMode(sheet) {
+  const sample = (Array.isArray(sheet?.data) ? sheet.data : [])
+    .slice(0, 6)
+    .map(row => (Array.isArray(row) ? row : []).map(cell => String(cell || '').trim().toUpperCase()).join(' '))
+    .join(' ');
+  const signals = ['LOCATION','PSA','BRGY','CBMS','POPCEN','MALE HEADED','FEMALE HEADED'];
+  return signals.filter(signal => sample.includes(signal)).length >= 2 ? 'styled' : 'plain';
+}
+function defaultSheetTheme() {
+  return {
+    headerDark: '#1e3a5f', headerLight: '#2d5fa3', code: '#4c1d95',
+    name: '#7c3aed', alt: '#dbeafe', total: '#1e3a5f',
+    highlight: '#fef9c3', note: '#f9fafb', gridBorder: '#d0d0d0',
+  };
+}
+function resizeGridData(old, rows, cols) {
+  return Array.from({length:rows},(_,r)=>Array.from({length:cols},(_,c)=>(old[r]&&old[r][c]!==undefined)?old[r][c]:''));
+}
+function colLetter(ci) { let s='',n=ci; while(n>=0){s=String.fromCharCode(65+(n%26))+s;n=Math.floor(n/26)-1;} return s; }
+function requestedOpenEntryId() {
+  try {
+    const id = new URLSearchParams(window.location.search).get('open');
+    const parsed = parseInt(id, 10);
+    return Number.isFinite(parsed) ? parsed : null;
+  } catch { return null; }
+}
+function updateOpenEntryQuery(entryId) {
+  try {
+    const url = new URL(window.location.href);
+    if (entryId === null || entryId === undefined) url.searchParams.delete('open');
+    else url.searchParams.set('open', String(entryId));
+    window.history.replaceState({}, '', url.toString());
+  } catch {}
+}
+function normalizeHexColor(color) {
+  const value = String(color || '').trim();
+  const match = value.match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i);
+  if (!match) return value;
+  const hex = match[1].length === 3
+    ? match[1].split('').map(ch => ch + ch).join('')
+    : match[1];
+  return `#${hex.toUpperCase()}`;
+}
+
+function scheduleIdle(task, timeout = 1200) {
+  if (window.requestIdleCallback) {
+    window.requestIdleCallback(task, { timeout });
+    return;
+  }
+  window.setTimeout(task, 250);
+}
+
+function loadExtendedFontPack() {
+  if (window.ensureTagVaultFontPack) window.ensureTagVaultFontPack('extended');
+}
+
+// v-click-outside directive
+const vClickOutside = {
+  mounted(el, binding) {
+    el._clickOutside = (e) => { if (!el.contains(e.target)) binding.value(e); };
+    document.addEventListener('mousedown', el._clickOutside);
+  },
+  unmounted(el) { document.removeEventListener('mousedown', el._clickOutside); }
+};
+
+createApp({
+  directives: { clickOutside: vClickOutside },
+  setup() {
+    scheduleIdle(loadExtendedFontPack);
+
+    const entries       = ref(loadEntries());
+    const categories    = ref(loadCategories());
+    const search        = ref('');
+    const catFilter     = ref('');
+    const selected      = ref([]);
+    const confirmDelete = ref(false);
+    const editEntry     = ref(null);
+    const editCatOpen   = ref(false);
+    const editTagInput  = ref('');
+    const sortField     = ref('createdAt');
+    const sortDir       = ref('desc');
+    const toasts        = ref([]);
+    const sheetEntry    = ref(null);
+    const gridRows      = ref(DEFAULT_ROWS);
+    const gridCols      = ref(DEFAULT_COLS);
+    const gridData      = ref([]);
+    const activeCell    = ref(null);
+    const activeRow     = ref(null);
+    const activeCol     = ref(null);
+    const selectAllMode = ref(false);
+    const rangeStart    = ref(null);
+    const rangeEnd      = ref(null);
+    const isSelectingRange = ref(false);
+    const colorMode     = ref('fill');
+    const currentSheetStyleMode = ref('plain');
+    const isDirty       = ref(false);
+    const justSaved     = ref(false);
+    const showColorDropdown = ref(false);  // replaces showThemeEditor
+    const showFontDropdown = ref(false);
+    const theme         = ref(defaultSheetTheme());
+    const cellStyles    = ref({});
+    const currentSheetWorkbookId = ref('sheet-1');
+    const undoStack     = ref([]);
+    const sheetsStore   = ref(loadSheets());
+    const colorPickerWrapRef = ref(null);
+    const fontPickerWrapRef = ref(null);
+    // More Colors dialog state
+    const showMoreColors    = ref(false);
+    const mcdTab            = ref('custom');
+    const mcdR              = ref(0);
+    const mcdG              = ref(128);
+    const mcdB              = ref(255);
+    const mcdHue            = ref(210);   // 0-360
+    const mcdPickedColor    = ref('#0080ff');
+    const mcdCurrentColor   = ref('#0080ff');
+    const mcdHexInput       = ref('#0080FF');
+    const mcdCursorX        = ref(0);
+    const mcdCursorY        = ref(0);
+    const mcdHueCursorY     = ref(0);
+    const mcdCanvasRef      = ref(null);
+    const mcdHueRef         = ref(null);
+    const mcdIsDraggingCanvas = ref(false);
+    const mcdIsDraggingHue    = ref(false);
+    const expandedEditorRef = ref(null);
+    const recentFontValues = ref(loadRecentFonts());
+    const fontOptions = [
+      { label: 'Plus Jakarta Sans', value: "'Plus Jakarta Sans', sans-serif" },
+      { label: 'DM Sans', value: "'DM Sans', sans-serif" },
+      { label: 'Manrope', value: "Manrope, sans-serif" },
+      { label: 'Nunito', value: "Nunito, sans-serif" },
+      { label: 'Poppins', value: "Poppins, sans-serif" },
+      { label: 'Outfit', value: "Outfit, sans-serif" },
+      { label: 'Lexend', value: "Lexend, sans-serif" },
+      { label: 'Space Grotesk', value: "'Space Grotesk', sans-serif" },
+      { label: 'Raleway', value: "Raleway, sans-serif" },
+      { label: 'Fira Sans', value: "'Fira Sans', sans-serif" },
+      { label: 'Source Sans 3', value: "'Source Sans 3', sans-serif" },
+      { label: 'Open Sans', value: "'Open Sans', sans-serif" },
+      { label: 'Trebuchet MS', value: "'Trebuchet MS', sans-serif" },
+      { label: 'Verdana', value: "Verdana, sans-serif" },
+      { label: 'Tahoma', value: "Tahoma, sans-serif" },
+      { label: 'Arial', value: "Arial, sans-serif" },
+      { label: 'Playfair Display', value: "'Playfair Display', serif" },
+      { label: 'Merriweather', value: "Merriweather, serif" },
+      { label: 'Lora', value: "Lora, serif" },
+      { label: 'Libre Baskerville', value: "'Libre Baskerville', serif" },
+      { label: 'Roboto Slab', value: "'Roboto Slab', serif" },
+      { label: 'Georgia', value: "Georgia, 'Times New Roman', serif" },
+      { label: 'Garamond', value: "Garamond, serif" },
+      { label: 'Palatino', value: "'Palatino Linotype', Palatino, serif" },
+      { label: 'Oswald', value: "Oswald, sans-serif" },
+      { label: 'Bebas Neue', value: "'Bebas Neue', sans-serif" },
+      { label: 'JetBrains Mono', value: "'JetBrains Mono', monospace" },
+      { label: 'Courier New', value: "'Courier New', monospace" },
+      { label: 'Lucida Console', value: "'Lucida Console', monospace" },
+    ];
+    const cellRefs      = {};
+
+
+    // ── More Colors dialog helpers ──────────────────────────────
+    function hexToRgb(hex){
+      const h=hex.replace('#','');
+      const big=parseInt(h.length===3?h.split('').map(c=>c+c).join(''):h,16);
+      return{r:(big>>16)&255,g:(big>>8)&255,b:big&255};
+    }
+    function rgbToHex(r,g,b){ return'#'+[r,g,b].map(v=>v.toString(16).padStart(2,'0')).join('').toUpperCase(); }
+    function rgbToHsv(r,g,b){
+      r/=255;g/=255;b/=255;
+      const max=Math.max(r,g,b),min=Math.min(r,g,b),d=max-min;
+      let h=0,s=max===0?0:d/max,v=max;
+      if(d!==0){
+        if(max===r)h=((g-b)/d)%6;
+        else if(max===g)h=(b-r)/d+2;
+        else h=(r-g)/d+4;
+        h=Math.round(h*60); if(h<0)h+=360;
+      }
+      return{h,s,v};
+    }
+    function hsvToRgb(h,s,v){
+      const c=v*s,x=c*(1-Math.abs((h/60)%2-1)),m=v-c;
+      let r=0,g=0,b=0;
+      if(h<60){r=c;g=x;}else if(h<120){r=x;g=c;}else if(h<180){g=c;b=x;}
+      else if(h<240){g=x;b=c;}else if(h<300){r=x;b=c;}else{r=c;b=x;}
+      return{r:Math.round((r+m)*255),g:Math.round((g+m)*255),b:Math.round((b+m)*255)};
+    }
+    function mcdDrawCanvas(){
+      nextTick(()=>{
+        const canvas=mcdCanvasRef.value; if(!canvas)return;
+        const ctx=canvas.getContext('2d');
+        const W=canvas.width,H=canvas.height;
+        // Draw hue row
+        const imgData=ctx.createImageData(W,H);
+        for(let y=0;y<H;y++){
+          for(let x=0;x<W;x++){
+            const s=x/W, v=1-y/H;
+            const{r,g,b}=hsvToRgb(mcdHue.value,s,v);
+            const i=(y*W+x)*4;
+            imgData.data[i]=r;imgData.data[i+1]=g;imgData.data[i+2]=b;imgData.data[i+3]=255;
+          }
+        }
+        ctx.putImageData(imgData,0,0);
+      });
+    }
+    function mcdDrawHueStrip(){
+      nextTick(()=>{
+        const canvas=mcdHueRef.value; if(!canvas)return;
+        const ctx=canvas.getContext('2d');
+        const W=canvas.width,H=canvas.height;
+        const imgData=ctx.createImageData(W,H);
+        for(let y=0;y<H;y++){
+          const hue=y/H*360;
+          const{r,g,b}=hsvToRgb(hue,1,1);
+          for(let x=0;x<W;x++){
+            const i=(y*W+x)*4;
+            imgData.data[i]=r;imgData.data[i+1]=g;imgData.data[i+2]=b;imgData.data[i+3]=255;
+          }
+        }
+        ctx.putImageData(imgData,0,0);
+      });
+    }
+    function mcdSyncCursorFromHsv(s,v){
+      const canvas=mcdCanvasRef.value;
+      if(!canvas)return;
+      mcdCursorX.value=Math.round(s*canvas.width);
+      mcdCursorY.value=Math.round((1-v)*canvas.height);
+    }
+    function mcdSyncHueCursorFromHue(){
+      const canvas=mcdHueRef.value;
+      if(!canvas)return;
+      mcdHueCursorY.value=Math.round((mcdHue.value/360)*canvas.height);
+    }
+    function mcdSyncFromRgb(){
+      const{h,s,v}=rgbToHsv(mcdR.value,mcdG.value,mcdB.value);
+      mcdHue.value=h;
+      mcdPickedColor.value=rgbToHex(mcdR.value,mcdG.value,mcdB.value);
+      mcdHexInput.value=mcdPickedColor.value;
+      mcdDrawCanvas();
+      mcdSyncCursorFromHsv(s,v);
+      mcdSyncHueCursorFromHue();
+    }
+    function mcdSyncFromHex(hex){
+      const clean=String(hex).trim();
+      const full=clean.startsWith('#')?clean:'#'+clean;
+      if(!/^#[0-9a-fA-F]{6}$/.test(full))return;
+      const{r,g,b}=hexToRgb(full);
+      mcdR.value=r;mcdG.value=g;mcdB.value=b;
+      mcdPickedColor.value=full.toUpperCase();
+      mcdHexInput.value=mcdPickedColor.value;
+      const{h,s,v}=rgbToHsv(r,g,b);
+      mcdHue.value=h;
+      mcdDrawCanvas();
+      mcdSyncCursorFromHsv(s,v);
+      mcdSyncHueCursorFromHue();
+    }
+    function mcdSetR(v){ mcdR.value=Math.max(0,Math.min(255,parseInt(v)||0));mcdSyncFromRgb(); }
+    function mcdSetG(v){ mcdG.value=Math.max(0,Math.min(255,parseInt(v)||0));mcdSyncFromRgb(); }
+    function mcdSetB(v){ mcdB.value=Math.max(0,Math.min(255,parseInt(v)||0));mcdSyncFromRgb(); }
+    function mcdCanvasPickAt(x,y){
+      const canvas=mcdCanvasRef.value; if(!canvas)return;
+      const rect=canvas.getBoundingClientRect();
+      const px=Math.max(0,Math.min(canvas.width-1,Math.round(x-rect.left)));
+      const py=Math.max(0,Math.min(canvas.height-1,Math.round(y-rect.top)));
+      const s=px/canvas.width, v=1-py/canvas.height;
+      mcdCursorX.value=px; mcdCursorY.value=py;
+      const{r,g,b}=hsvToRgb(mcdHue.value,s,v);
+      mcdR.value=r;mcdG.value=g;mcdB.value=b;
+      mcdPickedColor.value=rgbToHex(r,g,b);
+      mcdHexInput.value=mcdPickedColor.value;
+    }
+    function mcdCanvasDown(e){ mcdIsDraggingCanvas.value=true; mcdCanvasPickAt(e.clientX,e.clientY); }
+    function mcdCanvasMove(e){ if(!mcdIsDraggingCanvas.value)return; mcdCanvasPickAt(e.clientX,e.clientY); }
+    function mcdCanvasUp(){ mcdIsDraggingCanvas.value=false; }
+    function mcdHuePickAt(y){
+      const canvas=mcdHueRef.value; if(!canvas)return;
+      const rect=canvas.getBoundingClientRect();
+      const py=Math.max(0,Math.min(canvas.height-1,Math.round(y-rect.top)));
+      mcdHueCursorY.value=py;
+      mcdHue.value=Math.round((py/canvas.height)*360);
+      const{s,v}=rgbToHsv(mcdR.value,mcdG.value,mcdB.value);
+      const{r,g,b}=hsvToRgb(mcdHue.value,s,v);
+      mcdR.value=r;mcdG.value=g;mcdB.value=b;
+      mcdPickedColor.value=rgbToHex(r,g,b);
+      mcdHexInput.value=mcdPickedColor.value;
+      mcdDrawCanvas();
+    }
+    function mcdHueDown(e){ mcdIsDraggingHue.value=true; mcdHuePickAt(e.clientY); }
+    function mcdHueMove(e){ if(!mcdIsDraggingHue.value)return; mcdHuePickAt(e.clientY); }
+    function mcdHueUp(){ mcdIsDraggingHue.value=false; }
+    function switchMcdTab(tab){
+      mcdTab.value=tab;
+      if(tab!=='custom') return;
+      nextTick(()=>{
+        mcdDrawCanvas();
+        mcdDrawHueStrip();
+        const{h,s,v}=rgbToHsv(mcdR.value,mcdG.value,mcdB.value);
+        mcdHue.value=h;
+        mcdSyncCursorFromHsv(s,v);
+        mcdSyncHueCursorFromHue();
+      });
+    }
+    function openMoreColors(){
+      const cur=selectedColorValue.value||'#FFFFFF';
+      mcdCurrentColor.value=cur;
+      mcdPickedColor.value=cur;
+      mcdSyncFromHex(cur);
+      showMoreColors.value=true;
+      showColorDropdown.value=false;
+      nextTick(()=>{
+        mcdDrawCanvas();
+        mcdDrawHueStrip();
+        // Re-sync cursor positions after draw
+        const{h,s,v}=rgbToHsv(mcdR.value,mcdG.value,mcdB.value);
+        mcdSyncCursorFromHsv(s,v);
+        mcdSyncHueCursorFromHue();
+      });
+    }
+    // Global mouseup to stop drag
+    if(typeof window!=='undefined'){
+      window.addEventListener('mouseup',()=>{
+        mcdIsDraggingCanvas.value=false;
+        mcdIsDraggingHue.value=false;
+      });
+      window.addEventListener('mousemove',(e)=>{
+        if(mcdIsDraggingCanvas.value) mcdCanvasPickAt(e.clientX,e.clientY);
+        if(mcdIsDraggingHue.value) mcdHuePickAt(e.clientY);
+      });
+    }
+    function confirmMoreColors(){
+      applyColorToActiveSelection(mcdPickedColor.value);
+      showMoreColors.value=false;
+    }
+    function cancelMoreColors(){ showMoreColors.value=false; }
+
+    // Standard colors for the honeycomb grid
+    const mcdStandardColors=[
+      '#FFFFFF','#F2F2F2','#D9D9D9','#BFBFBF','#A6A6A6','#808080','#595959','#404040','#262626','#0D0D0D',
+      '#FF0000','#FF6600','#FFFF00','#00FF00','#00FFFF','#0000FF','#9900FF','#FF00FF','#FF99CC','#FFCC99',
+      '#FFFF99','#CCFFCC','#CCFFFF','#99CCFF','#CC99FF','#FF99FF','#CC0000','#CC6600','#CCCC00','#006600',
+      '#006666','#003399','#660099','#993366','#FF6666','#FFCC66','#FFFF66','#66FF66','#66FFFF','#6699FF',
+      '#CC66FF','#FF66CC','#990000','#993300','#999900','#003300','#003333','#003366','#330099','#990033',
+      '#FF3333','#FF9933','#FFFF33','#33FF33','#33FFFF','#3399FF','#9933FF','#FF33CC','#660000','#663300',
+      '#666600','#003300','#006666','#000066','#330066','#660033','#FF6633','#FFCC33','#CCFF33','#33FF99',
+      '#33CCFF','#3366FF','#6633FF','#FF3399','#CC3300','#CC9900','#99CC00','#00CC66','#00CCCC','#0066CC',
+      '#6600CC','#CC0066','#FF9966','#FFCC99','#CCFF99','#99FFCC','#99FFFF','#99CCFF','#CC99FF','#FF99CC',
+    ];
+
+    function toggleColorDropdown() { showFontDropdown.value = false; showColorDropdown.value = !showColorDropdown.value; }
+    function closeColorDropdown()  { showColorDropdown.value = false; }
+
+    function catColor(name) { return (categories.value.find(c=>c.name===name)||{}).color||'#94a3b8'; }
+    function getPillClass(t) { const m={csv:'pill-csv',excel:'pill-excel'}; return 'pill '+(m[t.toLowerCase()]||'pill-other'); }
+    function setCellRef(el,ri,ci) { if(el) cellRefs[ri+'-'+ci]=el; }
+    function cellStyleKey(ri, ci) { return `${ri}-${ci}`; }
+    function getCellFormat(ri, ci) { return cellStyles.value[cellStyleKey(ri, ci)] || {}; }
+    function setColorMode(mode) { colorMode.value = mode; }
+    function touchDirty() { isDirty.value = true; justSaved.value = false; }
+    function cloneGridData() { return gridData.value.map(row => [...row]); }
+    function cloneCellStyles() { return JSON.parse(JSON.stringify(cellStyles.value)); }
+    function snapshotSheetState() {
+      return { gridRows: gridRows.value, gridCols: gridCols.value, gridData: cloneGridData(), cellStyles: cloneCellStyles() };
+    }
+    function pushUndoState() {
+      undoStack.value.push(snapshotSheetState());
+      if (undoStack.value.length > 100) undoStack.value.shift();
+    }
+    function restoreSheetState(state) {
+      if (!state) return;
+      gridRows.value = state.gridRows; gridCols.value = state.gridCols;
+      gridData.value = state.gridData.map(row => [...row]);
+      cellStyles.value = JSON.parse(JSON.stringify(state.cellStyles || {}));
+      touchDirty();
+    }
+    function undoLastChange() { const p = undoStack.value.pop(); if (!p) return; restoreSheetState(p); }
+    function clearOtherSelections() {
+      activeRow.value=null; activeCol.value=null; selectAllMode.value=false;
+      rangeStart.value=null; rangeEnd.value=null; isSelectingRange.value=false;
+    }
+    function getNormalizedRange() {
+      if (!rangeStart.value || !rangeEnd.value) return null;
+      const [r1,c1]=rangeStart.value, [r2,c2]=rangeEnd.value;
+      return {top:Math.min(r1,r2),bottom:Math.max(r1,r2),left:Math.min(c1,c2),right:Math.max(c1,c2)};
+    }
+    function hasRangeSelection() { return !!getNormalizedRange(); }
+    function forEachSelectedCell(cb) {
+      const range = getNormalizedRange();
+      if (range) { for(let ri=range.top;ri<=range.bottom;ri++) for(let ci=range.left;ci<=range.right;ci++) cb(ri,ci); return; }
+      if (selectAllMode.value) { for(let ri=0;ri<gridRows.value;ri++) for(let ci=0;ci<gridCols.value;ci++) cb(ri,ci); return; }
+      if (activeRow.value!==null) { for(let ci=0;ci<gridCols.value;ci++) cb(activeRow.value,ci); return; }
+      if (activeCol.value!==null) { for(let ri=0;ri<gridRows.value;ri++) cb(ri,activeCol.value); return; }
+      if (activeCell.value) { const[ri,ci]=activeCell.value; cb(ri,ci); }
+    }
+    function applyColorToActiveSelection(color) {
+      let changed=false; pushUndoState();
+      forEachSelectedCell((ri,ci)=>{
+        const key=cellStyleKey(ri,ci); const next={...getCellFormat(ri,ci)};
+        if(next[colorMode.value]===color)return; next[colorMode.value]=color; cellStyles.value[key]=next; changed=true;
+      });
+      if(!changed){undoStack.value.pop();return;} touchDirty();
+    }
+    function applyTransparentToActiveSelection() {
+      if(colorMode.value!=='fill')return; let changed=false; pushUndoState();
+      forEachSelectedCell((ri,ci)=>{
+        const key=cellStyleKey(ri,ci); const next={...getCellFormat(ri,ci)};
+        if(!('fill' in next))return; delete next.fill;
+        if(Object.keys(next).length) cellStyles.value[key]=next; else delete cellStyles.value[key]; changed=true;
+      });
+      if(!changed){undoStack.value.pop();return;} touchDirty();
+    }
+    function clearActiveSelectionFormat() {
+      let changed=false; pushUndoState();
+      forEachSelectedCell((ri,ci)=>{ if(!cellStyles.value[cellStyleKey(ri,ci)])return; delete cellStyles.value[cellStyleKey(ri,ci)]; changed=true; });
+      if(!changed){undoStack.value.pop();return;} touchDirty();
+    }
+    function baseCellFormat(ri,ci) {
+      const base = {
+        fill: '#FFFFFF',
+        text: '#1A1A1A',
+        border: normalizeHexColor(theme.value.gridBorder || '#D0D0D0'),
+      };
+      if (currentSheetStyleMode.value !== 'styled') return base;
+      const row = gridData.value[ri] || [];
+      const rc = rowClass(row, ri);
+      const cc = cellClass(row, ri, ci);
+      if (rc === 'row-highlight') {
+        base.fill = normalizeHexColor(theme.value.highlight || '#FEF9C3');
+        base.text = '#78350F';
+      } else if (rc === 'row-title') {
+        base.fill = '#FFFFFF';
+        base.text = '#1E293B';
+      } else if (rc === 'row-header-dark') {
+        base.fill = normalizeHexColor(theme.value.headerDark || '#1E3A5F');
+        base.text = '#FFFFFF';
+      } else if (rc === 'row-header-light') {
+        base.fill = normalizeHexColor(theme.value.headerLight || '#2D5FA3');
+        base.text = '#FFFFFF';
+      } else if (rc === 'row-data-alt') {
+        base.fill = normalizeHexColor(theme.value.alt || '#DBEAFE');
+      } else if (rc === 'row-total') {
+        base.fill = normalizeHexColor(theme.value.total || '#1E3A5F');
+        base.text = '#FFFFFF';
+      } else if (rc === 'row-note') {
+        base.fill = normalizeHexColor(theme.value.note || '#F9FAFB');
+        base.text = '#64748B';
+      } else if (rc === 'row-empty') {
+        base.fill = '#FAFAFA';
+      }
+      if (cc === 'cell-code') {
+        base.fill = normalizeHexColor(theme.value.code || '#4C1D95');
+        base.text = '#FFFFFF';
+      } else if (cc === 'cell-location') {
+        base.fill = normalizeHexColor(theme.value.name || '#7C3AED');
+        base.text = '#FFFFFF';
+      }
+      return base;
+    }
+    function effectiveCellColor(ri,ci,mode) {
+      const custom = getCellFormat(ri,ci);
+      const base = baseCellFormat(ri,ci);
+      if (mode === 'fill') return normalizeHexColor(custom.fill || base.fill || '#D1D5DB');
+      if (mode === 'text') return normalizeHexColor(custom.text || base.text || '#1A1A1A');
+      if (mode === 'border') return normalizeHexColor(custom.border || base.border || theme.value.gridBorder || '#D0D0D0');
+      return '#D1D5DB';
+    }
+    function selectedColor() {
+      let value='#D1D5DB', found=false;
+      forEachSelectedCell((ri,ci)=>{ if(found)return; value=effectiveCellColor(ri,ci,colorMode.value); found=true; });
+      return value;
+    }
+    function selectedAlign() {
+      let value='left', found=false;
+      forEachSelectedCell((ri,ci)=>{ if(found)return; value=getCellFormat(ri,ci).align||'left'; found=true; });
+      return value;
+    }
+    function selectedFont() {
+      let value=fontOptions[0].value, found=false;
+      forEachSelectedCell((ri,ci)=>{ if(found)return; value=getCellFormat(ri,ci).fontFamily||fontOptions[0].value; found=true; });
+      return value;
+    }
+    function selectedBoldValue() {
+      let value=false, found=false;
+      forEachSelectedCell((ri,ci)=>{ if(found)return; value=!!getCellFormat(ri,ci).bold; found=true; });
+      return value;
+    }
+    function selectedItalicValue() {
+      let value=false, found=false;
+      forEachSelectedCell((ri,ci)=>{ if(found)return; value=!!getCellFormat(ri,ci).italic; found=true; });
+      return value;
+    }
+    function setTextAlign(align) {
+      let changed=false; pushUndoState();
+      forEachSelectedCell((ri,ci)=>{
+        const key=cellStyleKey(ri,ci); const next={...getCellFormat(ri,ci),align};
+        if(getCellFormat(ri,ci).align===align)return; cellStyles.value[key]=next; changed=true;
+      });
+      if(!changed){undoStack.value.pop();return;} touchDirty();
+    }
+    function getFontOptionByValue(value) {
+      return fontOptions.find(font=>font.value===value) || fontOptions[0];
+    }
+    function rememberRecentFont(fontFamily) {
+      recentFontValues.value = [fontFamily, ...recentFontValues.value.filter(value=>value!==fontFamily)]
+        .filter(value=>fontOptions.some(font=>font.value===value))
+        .slice(0, 6);
+      saveRecentFonts(recentFontValues.value);
+    }
+    function setFontFamily(fontFamily) {
+      let changed=false; pushUndoState();
+      forEachSelectedCell((ri,ci)=>{
+        const key=cellStyleKey(ri,ci); const next={...getCellFormat(ri,ci),fontFamily};
+        if(getCellFormat(ri,ci).fontFamily===fontFamily)return; cellStyles.value[key]=next; changed=true;
+      });
+      if(!changed){undoStack.value.pop();return;}
+      rememberRecentFont(fontFamily);
+      showFontDropdown.value=false;
+      touchDirty();
+    }
+    function toggleBold() {
+      const nextBold=!selectedBoldValue();
+      let changed=false; pushUndoState();
+      forEachSelectedCell((ri,ci)=>{
+        const key=cellStyleKey(ri,ci); const next={...getCellFormat(ri,ci),bold:nextBold};
+        if(!!getCellFormat(ri,ci).bold===nextBold)return; cellStyles.value[key]=next; changed=true;
+      });
+      if(!changed){undoStack.value.pop();return;} touchDirty();
+    }
+    function toggleItalic() {
+      const nextItalic=!selectedItalicValue();
+      let changed=false; pushUndoState();
+      forEachSelectedCell((ri,ci)=>{
+        const key=cellStyleKey(ri,ci); const next={...getCellFormat(ri,ci),italic:nextItalic};
+        if(!!getCellFormat(ri,ci).italic===nextItalic)return; cellStyles.value[key]=next; changed=true;
+      });
+      if(!changed){undoStack.value.pop();return;} touchDirty();
+    }
+    function toggleFontDropdown() {
+      if(!hasActiveSelection.value) return;
+      showColorDropdown.value = false;
+      loadExtendedFontPack();
+      showFontDropdown.value = !showFontDropdown.value;
+    }
+    function closeFontDropdown() {
+      showFontDropdown.value = false;
+    }
+    function tableThemeStyle() {
+      return {
+        '--theme-header-dark':theme.value.headerDark,'--theme-header-light':theme.value.headerLight,
+        '--theme-code':theme.value.code,'--theme-name':theme.value.name,'--theme-alt':theme.value.alt,
+        '--theme-total':theme.value.total,'--theme-highlight':theme.value.highlight,
+        '--theme-note':theme.value.note,'--theme-grid-border':theme.value.gridBorder,
+      };
+    }
+    function cellBoxStyle(ri,ci){ return { borderColor: getCellFormat(ri,ci).border||'' }; }
+    function cellInputStyle(ri,ci) {
+      const f=getCellFormat(ri,ci);
+      return {
+        background:f.fill||'',
+        color:f.text||'',
+        textAlign:f.align||'left',
+        fontFamily:f.fontFamily||'',
+        fontWeight:'bold' in f ? (f.bold ? '700' : '400') : '',
+        fontStyle:'italic' in f ? (f.italic ? 'italic' : 'normal') : '',
+      };
+    }
+    function isLongCellValue(value) {
+      const text=String(value||'').trim();
+      return text.length>=28 || /\n/.test(text);
+    }
+    function findPreferredEditorCell(rows){
+      for(let ri=0;ri<rows.length;ri++){
+        for(let ci=0;ci<(rows[ri]||[]).length;ci++){
+          if(isLongCellValue(rows[ri][ci])) return [ri,ci];
+        }
+      }
+      for(let ri=0;ri<rows.length;ri++){
+        for(let ci=0;ci<(rows[ri]||[]).length;ci++){
+          if(String(rows[ri][ci]||'').trim()) return [ri,ci];
+        }
+      }
+      return rows.length&&rows[0]?.length?[0,0]:null;
+    }
+    function getRowText(row){ return row.map(c=>String(c||'').trim()).join(' '); }
+    function isRowEmpty(row){ return row.every(c=>!c||!String(c).trim()); }
+    function getNonEmpty(row){ return row.filter(c=>c&&String(c).trim()); }
+    function hasDataNumbers(row){
+      return row.some(c=>{const v=String(c||'').trim().replace(/,/g,'');if(!/^\d+$/.test(v))return false;if(/^0\d+$/.test(String(c||'').trim()))return false;return parseInt(v,10)>9;});
+    }
+    function isCbmsStyledSheet(rows){
+      const sample=(rows||[]).slice(0,6).map(row=>row.map(c=>String(c||'').trim().toUpperCase()).join(' ')).join(' ');
+      const signals=['LOCATION','PSA','BRGY','CBMS','POPCEN','MALE HEADED','FEMALE HEADED'];
+      return signals.filter(s=>sample.includes(s)).length>=2;
+    }
+    function rowClass(row,ri){
+      if(isRowEmpty(row))return 'row-empty';
+      const txt=getRowText(row).toLowerCase(),rawTxt=getRowText(row);
+      const firstCell=String(row[0]||'').trim().toLowerCase();
+      const nonEmpty=getNonEmpty(row);
+      if(/^note[:\s]/i.test(firstCell)||/^source[:\s]/i.test(firstCell)||txt.includes('male-headed households have')||txt.includes('female-headed households have')||txt.startsWith('note:')||txt.startsWith('source:'))return 'row-note';
+      if(ri===0)return 'row-highlight';
+      if(/\btotal\b/i.test(txt)&&!txt.includes('male-headed')&&!txt.includes('female-headed'))return 'row-total';
+      if(ri===1&&!hasDataNumbers(row))return 'row-title';
+      const isAllCaps=rawTxt.trim().length>3&&rawTxt.toUpperCase()===rawTxt&&/[A-Z]/.test(rawTxt);
+      if(isAllCaps&&!hasDataNumbers(row))return ri<=4?'row-header-dark':'row-header-light';
+      if(!hasDataNumbers(row)&&nonEmpty.length<=5&&ri<=5)return ri<=3?'row-header-dark':'row-header-light';
+      return ri%2===0?'row-data-alt':'row-data';
+    }
+    function cellClass(row,ri,ci){
+      if(!isCbmsStyledSheet(gridData.value))return '';
+      const rc=rowClass(row,ri),isDataRow=rc==='row-data'||rc==='row-data-alt';
+      if(isDataRow){
+        if(ci===0)return 'cell-code';if(ci===1)return 'cell-location';
+        const v=String(row[ci]||'').trim();if(/^\d{2,3}:\d{1,3}$/.test(v))return 'cell-ratio';
+      }
+      return '';
+    }
+    function tableRowClass(row,ri){ return currentSheetStyleMode.value==='styled'?rowClass(row,ri):''; }
+    function tableCellClass(row,ri,ci){ return currentSheetStyleMode.value==='styled'?cellClass(row,ri,ci):''; }
+
+    function openSheet(entry){
+      loadExtendedFontPack();
+      sheetEntry.value=entry; updateOpenEntryQuery(entry.id);
+      const saved=sheetsStore.value[entry.id];
+      if(saved){
+        const workbook = normalizeStoredWorkbook(saved, entry.title);
+        const activeSheet = workbook.sheets.find(sheet => sheet.id === workbook.activeSheetId) || workbook.sheets[0];
+        currentSheetWorkbookId.value = activeSheet?.id || 'sheet-1';
+        gridRows.value=activeSheet.rows;
+        gridCols.value=activeSheet.cols;
+        gridData.value=resizeGridData(activeSheet.data,activeSheet.rows,activeSheet.cols);
+        theme.value={...defaultSheetTheme(),...(activeSheet.theme||{})};
+        cellStyles.value={...(activeSheet.cellStyles||{})};
+        currentSheetStyleMode.value=activeSheet.styleMode||detectSheetStyleMode(activeSheet);
+      }
+      else{
+        currentSheetWorkbookId.value='sheet-1';
+        gridRows.value=DEFAULT_ROWS;gridCols.value=DEFAULT_COLS;gridData.value=makeGrid(DEFAULT_ROWS,DEFAULT_COLS);theme.value=defaultSheetTheme();cellStyles.value={};currentSheetStyleMode.value='plain';
+      }
+      undoStack.value=[];colorMode.value='fill';showColorDropdown.value=false;showFontDropdown.value=false;isDirty.value=false;justSaved.value=false;
+      activeCell.value=findPreferredEditorCell(gridData.value);activeRow.value=null;activeCol.value=null;selectAllMode.value=false;rangeStart.value=null;rangeEnd.value=null;isSelectingRange.value=false;
+    }
+    function closeSheet(){
+      sheetEntry.value=null;activeCell.value=null;activeRow.value=null;activeCol.value=null;
+      selectAllMode.value=false;rangeStart.value=null;rangeEnd.value=null;isSelectingRange.value=false;
+      showColorDropdown.value=false;showFontDropdown.value=false;colorMode.value='fill';updateOpenEntryQuery(null);
+    }
+    function updateCell(ri,ci,val){ if(gridData.value[ri][ci]===val)return; pushUndoState(); gridData.value[ri][ci]=val;isDirty.value=true;justSaved.value=false; }
+    function resizeGrid(){
+      const r=Math.max(1,Math.min(200,gridRows.value||DEFAULT_ROWS)),c=Math.max(1,Math.min(26,gridCols.value||DEFAULT_COLS));
+      if(r===gridData.value.length&&c===(gridData.value[0]?.length||0))return;
+      pushUndoState();gridRows.value=r;gridCols.value=c;gridData.value=resizeGridData(gridData.value,r,c);isDirty.value=true;
+    }
+    function addRow(){ pushUndoState();gridRows.value++;gridData.value.push(Array(gridCols.value).fill(''));isDirty.value=true; }
+    function addCol(){ if(gridCols.value>=26)return;pushUndoState();gridCols.value++;gridData.value.forEach(row=>row.push(''));isDirty.value=true; }
+    function clearGrid(){ pushUndoState();gridData.value=makeGrid(gridRows.value,gridCols.value);cellStyles.value={};isDirty.value=true; }
+    function saveGrid(){
+      if(!sheetEntry.value)return;
+      const saved=sheetsStore.value[sheetEntry.value.id]||{};
+      const workbook=normalizeStoredWorkbook(saved,sheetEntry.value.title);
+      const activeSheetId=currentSheetWorkbookId.value||workbook.activeSheetId||'sheet-1';
+      const previousSheet=workbook.sheets.find(sheet=>sheet.id===activeSheetId);
+      const nextSheet={
+        id:activeSheetId,
+        name:previousSheet?.name||sheetEntry.value.title||'Sheet 1',
+        rows:gridRows.value,
+        cols:gridCols.value,
+        data:gridData.value.map(r=>[...r]),
+        theme:{...theme.value},
+        cellStyles:{...cellStyles.value},
+        styleMode:currentSheetStyleMode.value,
+      };
+      const nextWorkbookSheets=workbook.sheets.some(sheet=>sheet.id===activeSheetId)
+        ? workbook.sheets.map(sheet=>sheet.id===activeSheetId?nextSheet:sheet)
+        : [nextSheet, ...workbook.sheets];
+      sheetsStore.value[sheetEntry.value.id]={
+        rows:gridRows.value,
+        cols:gridCols.value,
+        data:gridData.value.map(r=>[...r]),
+        theme:{...theme.value},
+        cellStyles:{...cellStyles.value},
+        styleMode:currentSheetStyleMode.value,
+        workbook:{activeSheetId, sheets:nextWorkbookSheets},
+      };
+      saveSheets(sheetsStore.value);isDirty.value=false;justSaved.value=true;
+      showToast('Sheet saved!','success');setTimeout(()=>{justSaved.value=false;},3000);
+    }
+    function exportCSV(){
+      if(!sheetEntry.value)return;
+      const lines=gridData.value.map(row=>row.map(cell=>'"'+String(cell).replace(/"/g,'""')+'"').join(','));
+      const blob=new Blob([lines.join('\n')],{type:'text/csv'});
+      const url=URL.createObjectURL(blob);const a=document.createElement('a');
+      a.href=url;a.download=sheetEntry.value.title.replace(/\s+/g,'_')+'.csv';a.click();
+      URL.revokeObjectURL(url);showToast('CSV exported!','success');
+    }
+    function setActive(ri,ci){ clearOtherSelections();activeCell.value=[ri,ci]; }
+    function onCellFocus(ri,ci){ if(isSelectingRange.value)return;setActive(ri,ci); }
+    function startRangeSelection(ri,ci){
+      activeCell.value=null;activeRow.value=null;activeCol.value=null;selectAllMode.value=false;
+      rangeStart.value=[ri,ci];rangeEnd.value=[ri,ci];isSelectingRange.value=true;
+    }
+    function extendRangeSelection(ri,ci){ if(!isSelectingRange.value||!rangeStart.value)return;rangeEnd.value=[ri,ci]; }
+    function finishRangeSelection(){
+      if(!isSelectingRange.value)return;isSelectingRange.value=false;
+      if(!rangeStart.value||!rangeEnd.value)return;
+      if(rangeStart.value[0]===rangeEnd.value[0]&&rangeStart.value[1]===rangeEnd.value[1]){activeCell.value=[...rangeStart.value];rangeStart.value=null;rangeEnd.value=null;}
+    }
+    function selectRow(ri){ rangeStart.value=null;rangeEnd.value=null;isSelectingRange.value=false;activeCell.value=null;activeCol.value=null;selectAllMode.value=false;activeRow.value=ri; }
+    function selectCol(ci){ rangeStart.value=null;rangeEnd.value=null;isSelectingRange.value=false;activeCell.value=null;activeRow.value=null;selectAllMode.value=false;activeCol.value=ci; }
+    function selectAllCells(){ rangeStart.value=null;rangeEnd.value=null;isSelectingRange.value=false;activeCell.value=null;activeRow.value=null;activeCol.value=null;selectAllMode.value=true; }
+    function moveCell(ri,ci,dr,dc){
+      const nr=Math.min(gridRows.value-1,Math.max(0,ri+dr)),nc=Math.min(gridCols.value-1,Math.max(0,ci+dc));
+      clearOtherSelections();activeCell.value=[nr,nc];
+      nextTick(()=>{ const el=cellRefs[nr+'-'+nc];if(el)el.focus(); });
+    }
+    function onCellInputKeydown(e,ri,ci){
+      if(e.defaultPrevented||e.altKey||e.ctrlKey||e.metaKey)return;
+      if(e.key==='Enter'){e.preventDefault();e.stopPropagation();moveCell(ri,ci,1,0);return;}
+      if(e.key==='Tab'){e.preventDefault();e.stopPropagation();moveCell(ri,ci,0,e.shiftKey?-1:1);return;}
+      if(e.shiftKey)return;
+      if(e.key==='ArrowDown'){e.preventDefault();e.stopPropagation();moveCell(ri,ci,1,0);return;}
+      if(e.key==='ArrowUp'){e.preventDefault();e.stopPropagation();moveCell(ri,ci,-1,0);return;}
+      if(e.key==='ArrowRight'){e.preventDefault();e.stopPropagation();moveCell(ri,ci,0,1);return;}
+      if(e.key==='ArrowLeft'){e.preventDefault();e.stopPropagation();moveCell(ri,ci,0,-1);return;}
+    }
+    function updateActiveCellFromEditor(val){
+      if(!activeCell.value)return;
+      const[ri,ci]=activeCell.value;
+      updateCell(ri,ci,val);
+    }
+    function clearActiveCellValue(){
+      updateActiveCellFromEditor('');
+      nextTick(()=>{ if(expandedEditorRef.value) expandedEditorRef.value.focus(); });
+    }
+    function focusExpandedEditor(){
+      nextTick(()=>{ if(expandedEditorRef.value) expandedEditorRef.value.focus(); });
+    }
+    function focusActiveCellInput(){
+      if(!activeCell.value)return;
+      const[ri,ci]=activeCell.value;
+      nextTick(()=>{
+        const el=cellRefs[ri+'-'+ci];
+        if(el){ el.focus(); if(el.select) el.select(); }
+      });
+    }
+    function onGridKeydown(e){
+      if((e.ctrlKey||e.metaKey)&&!e.shiftKey&&e.key.toLowerCase()==='z'){ e.preventDefault();undoLastChange();return; }
+      if(!activeCell.value)return;
+      const[ri,ci]=activeCell.value;
+      if(e.key==='ArrowDown'){e.preventDefault();moveCell(ri,ci,1,0);}
+      if(e.key==='ArrowUp'){e.preventDefault();moveCell(ri,ci,-1,0);}
+      if(e.key==='ArrowRight'){e.preventDefault();moveCell(ri,ci,0,1);}
+      if(e.key==='ArrowLeft'){e.preventDefault();moveCell(ri,ci,0,-1);}
+    }
+    function onSheetShortcutKeydown(e){
+      if(e.defaultPrevented)return;
+      if((e.ctrlKey||e.metaKey)&&!e.shiftKey&&e.key.toLowerCase()==='z'){
+        e.preventDefault();
+        undoLastChange();
+      }
+    }
+    function setSort(f){ if(sortField.value===f)sortDir.value=sortDir.value==='asc'?'desc':'asc';else{sortField.value=f;sortDir.value='asc';} }
+
+    const filteredEntries=computed(()=>{
+      let r=[...entries.value];
+      if(catFilter.value)r=r.filter(e=>e.category===catFilter.value);
+      if(search.value.trim()){const q=search.value.toLowerCase();r=r.filter(e=>e.title.toLowerCase().includes(q)||e.category.toLowerCase().includes(q)||e.tags.some(t=>t.toLowerCase().includes(q)));}
+      r.sort((a,b)=>{let av=a[sortField.value],bv=b[sortField.value];if(typeof av==='string'){av=av.toLowerCase();bv=bv.toLowerCase();}return sortDir.value==='asc'?(av>bv?1:-1):(av<bv?1:-1);});
+      return r;
+    });
+    const totalTags  =computed(()=>entries.value.reduce((s,e)=>s+e.tags.length,0));
+    const uniqueCats =computed(()=>new Set(entries.value.map(e=>e.category)).size);
+    const csvCount   =computed(()=>entries.value.filter(e=>e.category==='CSV').length);
+    const excelCount =computed(()=>entries.value.filter(e=>e.category==='Excel').length);
+    const allSelected=computed(()=>filteredEntries.value.length>0&&filteredEntries.value.every(e=>selected.value.includes(e.id)));
+    const themePalette=computed(()=>THEME_PALETTE);
+    const standardPalette=computed(()=>STANDARD_PALETTE);
+    function cellSelectionClass(ri,ci){
+      const range=getNormalizedRange();
+      if(range&&ri>=range.top&&ri<=range.bottom&&ci>=range.left&&ci<=range.right){
+        return {'range-scope-active':true,'range-edge-top':ri===range.top,'range-edge-bottom':ri===range.bottom,'range-edge-left':ci===range.left,'range-edge-right':ci===range.right};
+      }
+      return {'active-cell':activeCell.value&&activeCell.value[0]===ri&&activeCell.value[1]===ci,'row-scope-active':activeRow.value===ri,'col-scope-active':activeCol.value===ci,'all-scope-active':selectAllMode.value};
+    }
+    const activeCellLabel=computed(()=>activeCell.value?`${colLetter(activeCell.value[1])}${activeCell.value[0]+1}`:'');
+    const hasActiveSelection=computed(()=>!!activeCell.value||activeRow.value!==null||activeCol.value!==null||selectAllMode.value||hasRangeSelection());
+    const activeSelectionLabel=computed(()=>{
+      const range=getNormalizedRange();
+      if(range)return`${colLetter(range.left)}${range.top+1}:${colLetter(range.right)}${range.bottom+1}`;
+      if(selectAllMode.value)return'All cells';
+      if(activeRow.value!==null)return`Row ${activeRow.value+1}`;
+      if(activeCol.value!==null)return`Column ${colLetter(activeCol.value)}`;
+      return activeCellLabel.value;
+    });
+    const selectedColorValue=computed(()=>selectedColor());
+    const selectedTextAlign=computed(()=>selectedAlign());
+    const selectedFontFamily=computed(()=>selectedFont());
+    const selectedBold=computed(()=>selectedBoldValue());
+    const selectedItalic=computed(()=>selectedItalicValue());
+    const selectedFontLabel=computed(()=>getFontOptionByValue(selectedFontFamily.value).label);
+    const recentFontOptions=computed(()=>recentFontValues.value
+      .map(value=>fontOptions.find(font=>font.value===value))
+      .filter(Boolean));
+    const hasEditorTarget=computed(()=>!!activeCell.value);
+    const activeCellValue=computed(()=>{
+      if(!activeCell.value)return'';
+      const[ri,ci]=activeCell.value;
+      return String(gridData.value[ri]?.[ci]||'');
+    });
+    const showExpandedEditor=computed(()=>!!sheetEntry.value);
+
+    const autoOpenId=requestedOpenEntryId();
+    if(autoOpenId!==null){const e=entries.value.find(e=>e.id===autoOpenId);if(e)nextTick(()=>openSheet(e));}
+
+    function toggleSelect(id){ const i=selected.value.indexOf(id);if(i>-1)selected.value.splice(i,1);else selected.value.push(id); }
+    function toggleAll(ev){ if(ev.target.checked)selected.value=filteredEntries.value.map(e=>e.id);else selected.value=[]; }
+    function deleteSheetData(ids){ ids.forEach(id=>{delete sheetsStore.value[id];});saveSheets(sheetsStore.value); }
+    function deleteOne(id){ entries.value=entries.value.filter(e=>e.id!==id);selected.value=selected.value.filter(s=>s!==id);deleteSheetData([id]);saveEntries(entries.value);showToast('Entry deleted','info'); }
+    function bulkDelete(){
+      const ids=[...selected.value];entries.value=entries.value.filter(e=>!ids.includes(e.id));deleteSheetData(ids);saveEntries(entries.value);
+      showToast(ids.length+' entries deleted','info');selected.value=[];confirmDelete.value=false;
+    }
+    function startEdit(e){ editEntry.value=JSON.parse(JSON.stringify(e));editCatOpen.value=false;editTagInput.value=''; }
+    function onEditTagKey(ev){
+      if(ev.key==='Enter'||ev.key===','){ev.preventDefault();const v=editTagInput.value.trim().replace(/,$/,'');if(v&&!editEntry.value.tags.includes(v))editEntry.value.tags.push(v);editTagInput.value='';}
+      else if(ev.key==='Backspace'&&!editTagInput.value&&editEntry.value.tags.length)editEntry.value.tags.pop();
+    }
+    function saveEdit(){
+      if(editTagInput.value.trim()){const v=editTagInput.value.trim();if(!editEntry.value.tags.includes(v))editEntry.value.tags.push(v);editTagInput.value='';}
+      const i=entries.value.findIndex(e=>e.id===editEntry.value.id);if(i>-1)entries.value[i]={...editEntry.value};saveEntries(entries.value);showToast('Entry updated','success');editEntry.value=null;
+    }
+    function showToast(msg,type='info'){ const id=Date.now();toasts.value.push({id,msg,type});setTimeout(()=>{toasts.value=toasts.value.filter(t=>t.id!==id);},2600); }
+
+    return {
+      entries,categories,search,catFilter,selected,confirmDelete,
+      editEntry,editCatOpen,editTagInput,sortField,sortDir,toasts,
+      sheetEntry,gridRows,gridCols,gridData,activeCell,activeRow,activeCol,selectAllMode,rangeStart,rangeEnd,
+      colorMode,currentSheetStyleMode,isDirty,justSaved,showColorDropdown,showFontDropdown,theme,
+      fontOptions,recentFontOptions,selectedFontLabel,themePalette,standardPalette,activeCellLabel,activeSelectionLabel,hasActiveSelection,selectedColorValue,selectedTextAlign,selectedFontFamily,selectedBold,selectedItalic,
+      hasEditorTarget,activeCellValue,showExpandedEditor,
+      colorPickerWrapRef,fontPickerWrapRef,
+      expandedEditorRef,
+      showMoreColors,mcdTab,mcdR,mcdG,mcdB,mcdPickedColor,mcdCurrentColor,mcdHexInput,
+      mcdCursorX,mcdCursorY,mcdHueCursorY,mcdCanvasRef,mcdHueRef,mcdStandardColors,
+      openMoreColors,confirmMoreColors,cancelMoreColors,switchMcdTab,
+      mcdCanvasDown,mcdCanvasMove,mcdCanvasUp,mcdHueDown,mcdHueMove,mcdHueUp,
+      mcdSetR,mcdSetG,mcdSetB,mcdSyncFromHex,
+      catColor,getPillClass,colLetter,setCellRef,tableThemeStyle,cellBoxStyle,cellInputStyle,isLongCellValue,findPreferredEditorCell,
+      setColorMode,setTextAlign,setFontFamily,toggleBold,toggleItalic,applyColorToActiveSelection,applyTransparentToActiveSelection,clearActiveSelectionFormat,
+      toggleColorDropdown,closeColorDropdown,toggleFontDropdown,closeFontDropdown,
+      openSheet,closeSheet,updateCell,updateActiveCellFromEditor,clearActiveCellValue,focusExpandedEditor,focusActiveCellInput,resizeGrid,addRow,addCol,clearGrid,saveGrid,exportCSV,
+      setActive,onCellFocus,startRangeSelection,extendRangeSelection,finishRangeSelection,selectRow,selectCol,selectAllCells,moveCell,onCellInputKeydown,onGridKeydown,onSheetShortcutKeydown,setSort,rowClass,cellClass,tableRowClass,tableCellClass,cellSelectionClass,
+      filteredEntries,totalTags,uniqueCats,csvCount,excelCount,allSelected,
+      toggleSelect,toggleAll,deleteOne,bulkDelete,startEdit,onEditTagKey,saveEdit,formatDate,
+    };
+  }
+}).mount('#app');
+</script>
+</body>
+</html>
